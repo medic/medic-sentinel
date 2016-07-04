@@ -205,7 +205,6 @@ exports['add response if unstructured message and setting enabled'] = function(t
     };
     transition.onMatch({ doc: doc }, {}, {}, function(err, changed) {
         test.ok(messageFn.calledOnce);
-        console.log();
         test.ok(messageFn.calledWith({
             doc: doc,
             phone: '+23',
