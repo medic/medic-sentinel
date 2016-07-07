@@ -6,13 +6,84 @@ var _ = require('underscore'),
     config = require('../config'),
     transitions = {};
 
+/*
+ * All transitions are disabled by default, add new ones here to make it
+ * available to the configuration.  For security reasons, we want to avoid
+ * doing a `require` based on a random input string, hence we maintain this
+ * index transitions.
+ */
+var availableTransitions = [
+  'accept_patient_reports',
+  'conditional_alerts',
+  'default_responses',
+  'update_sent_by',
+  'ohw_counseling',
+  'ohw_emergency_report',
+  'ohw_notifications',
+  'resolve_pending',
+  'registration',
+  'twilio_message',
+  'update_clinics',
+  'update_notifications',
+  'update_scheduled_reports',
+  'update_sent_forms'
+];
+
+/*
+ * Supported configuration:
+ *
+ * // disabled (old style)
+ * {
+ *  "transitions": {
+ *    "registrations": {
+ *      "disable": true
+ *    }
+ *  }
+ * }
+ *
+ * // disabled
+ * {
+ *  "transitions": {
+ *    "registrations": <falsey value>
+ *  }
+ * }
+ *
+ * // enabled (old style but ignores load string)
+ * {
+ *  "transitions": {
+ *    "registrations": {
+ *      "load": "../etc/passwd"
+ *    }
+ *  }
+ * }
+ *
+ * // enabled
+ * {
+ *  "transitions": {
+ *    "registrations": true
+ *  }
+ * }
+ *
+ * // enabled
+ * {
+ *  "transitions": {
+ *    "registrations": {}
+ *  }
+ * }
+ */
+
 if (!process.env.TEST_ENV) {
     _.each(config.get('transitions'), function(conf, key) {
-        if (conf.disable) {
+        if (!conf || conf.disable) {
             logger.warn('transition %s %s is disabled', key, conf.load);
             return;
         }
+        if (availableTransitions.indexOf(key) === -1) {
+            logger.warn('transition %s not available.', key);
+            return;
+        }
         try {
+            logger.info('loading transition %s %s', key, conf.load);
             transitions[key] = require('../' + conf.load);
         } catch(e) {
             // log exception
