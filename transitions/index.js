@@ -10,7 +10,7 @@ var _ = require('underscore'),
  * All transitions are disabled by default, add new ones here to make it
  * available to the configuration.  For security reasons, we want to avoid
  * doing a `require` based on a random input string, hence we maintain this
- * index transitions.
+ * index of transitions.
  */
 var availableTransitions = [
   'accept_patient_reports',
@@ -29,69 +29,34 @@ var availableTransitions = [
   'update_sent_forms'
 ];
 
-/*
- * Supported configuration:
- *
- * // disabled (old style)
- * {
- *  "transitions": {
- *    "registrations": {
- *      "disable": true
- *    }
- *  }
- * }
- *
- * // disabled
- * {
- *  "transitions": {
- *    "registrations": <falsey value>
- *  }
- * }
- *
- * // enabled (old style but ignores load string)
- * {
- *  "transitions": {
- *    "registrations": {
- *      "load": "../etc/passwd"
- *    }
- *  }
- * }
- *
- * // enabled
- * {
- *  "transitions": {
- *    "registrations": true
- *  }
- * }
- *
- * // enabled
- * {
- *  "transitions": {
- *    "registrations": {}
- *  }
- * }
- */
-
 if (!process.env.TEST_ENV) {
-    _.each(config.get('transitions'), function(conf, key) {
-        if (!conf || conf.disable) {
-            logger.warn('transition %s %s is disabled', key, conf.load);
-            return;
-        }
-        if (availableTransitions.indexOf(key) === -1) {
-            logger.warn('transition %s not available.', key);
-            return;
-        }
-        try {
-            logger.info('loading transition %s %s', key, conf.load);
-            transitions[key] = require('../' + conf.load);
-        } catch(e) {
-            // log exception
-            logger.error('failed loading transition %s %s', key, conf.load);
-            logger.error(e);
-        }
-    });
+  loadTransitions();
 }
+
+var loadTransitions = function() {
+  var self = module.exports;
+  _.each(config.get('transitions'), function(conf, key) {
+      if (!conf || conf.disable) {
+          logger.warn('transition %s is disabled', key);
+          return;
+      }
+      if (availableTransitions.indexOf(key) === -1) {
+          logger.warn('transition %s not available.', key);
+          return;
+      }
+      self._loadTransition(key);
+  });
+};
+
+var loadTransition = function(key) {
+  try {
+      logger.info('loading transition %s', key);
+      transitions[key] = require('./' + key);
+  } catch(e) {
+      logger.error('failed loading transition %s', key);
+      logger.error(e);
+  }
+};
 
 /*
  * Determines whether a transition is okay to run on a document.  Removed
@@ -430,6 +395,8 @@ var hasTransitionErrors = function(doc) {
 };
 
 module.exports = {
+    _loadTransition: loadTransition,
+    _loadTransitions: loadTransitions,
     canRun: canRun,
     attach: attach,
     finalize: finalize,
