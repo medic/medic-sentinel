@@ -81,6 +81,16 @@ Disabled
 }
 ```
 
+```
+{
+  "transitions": {
+    "registrations": {
+      "disable": true
+    }
+  }
+}
+```
+
 ## Transitions API
 
 A transition does async processing of a document once per rev/change, and obeys
