@@ -7,10 +7,9 @@ var _ = require('underscore'),
     transitions = {};
 
 /*
- * All transitions are disabled by default, add new ones here to make it
- * available to the configuration.  For security reasons, we want to avoid
- * doing a `require` based on a random input string, hence we maintain this
- * index of transitions.
+ * Add new transitions here to make them available for configuration.  For
+ * security reasons, we want to avoid doing a `require` based on random input,
+ * hence we maintain this index of transitions.
  */
 var availableTransitions = [
   'accept_patient_reports',
