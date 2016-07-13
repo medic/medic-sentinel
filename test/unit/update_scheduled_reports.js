@@ -22,115 +22,135 @@ exports['filter signature'] = function(test) {
     test.done();
 };
 
-exports['docs fail filter'] = function(test) {
-    var related_entities = {
-        clinic: {
-            contact: {
-                phone: "x"
-            }
-        }
-    };
+exports['filter fails when scheduled form not present'] = function(test) {
     test.equals(transition.filter({}), false);
     test.equals(transition.filter({
         patient_id: 'x',
     }), false);
-    // has errors
+    test.done();
+};
+exports['filter fails when errors are on doc'] = function(test) {
+    var contact = {
+        phone: 'x'
+    };
     test.equals(transition.filter({
         form: 'x',
-        month: 'x',
-        related_entities: related_entities,
+        fields: {
+          month: 'x',
+          year: 'y'
+        },
+        contact: contact,
         errors: ['x']
     }), false);
-    // missing year property
+    test.done();
+};
+exports['filter fails when no year value on form submission'] = function(test) {
+    var contact = {
+        phone: 'x'
+    };
     test.equals(transition.filter({
         form: 'x',
-        month: 'x',
-        related_entities: related_entities
+        fields: {
+          month: 'x'
+        },
+        contact: contact
     }), false);
     test.done();
 };
 
-exports['doc pass filter'] = function(test) {
-    var related_entities = {
-        clinic: {
-            contact: {
-                phone: "x"
-            }
-        }
+exports['filter passes when'] = function(test) {
+    var contact = {
+        phone: 'x'
     };
     // month, year property
     test.equals(transition.filter({
         form: 'x',
-        month: 'x',
-        year: 'x',
-        related_entities: related_entities
+        fields: {
+          month: 'x',
+          year: 'x'
+        },
+        contact: contact
     }), true);
     // month, year property and empty errors
     test.equals(transition.filter({
         form: 'x',
-        month: 'x',
-        year: 'x',
-        related_entities: related_entities,
+        fields: {
+          month: 'x',
+          year: 'x'
+        },
+        contact: contact,
         errors: []
     }), true);
     // month_num, year property
     test.equals(transition.filter({
         form: 'x',
-        month_num: 'x',
-        year: 'x',
-        related_entities: related_entities
+        fields: {
+          month_num: 'x',
+          year: 'x'
+        },
+        contact: contact
     }), true);
     // week, year property
     test.equals(transition.filter({
         form: 'x',
-        week: 'x',
-        year: 'x',
-        related_entities: related_entities
+        fields: {
+          week: 'x',
+          year: 'x'
+        },
+        contact: contact
     }), true);
     // week_number, year property
     test.equals(transition.filter({
         form: 'x',
-        week_number: 'x',
-        year: 'x',
-        related_entities: related_entities
+        fields: {
+          week_number: 'x',
+          year: 'x'
+        },
+        contact: contact
     }), true);
     test.done();
 };
 
 exports['use week view when doc has week property'] = function(test) {
   var db = {
-    view: function(ddoc, view, q , callback) {
-      test.same(
-          view,
-          'data_records_by_form_year_week_clinic_id_and_reported_date'
-      );
-      test.done();
+    medic: {
+      view: function(ddoc, view) {
+        test.same(
+            view,
+            'data_records_by_form_year_week_clinic_id_and_reported_date'
+        );
+        test.done();
+      }
     }
   };
-  transition._getDuplicates(db, {week: 9});
+  transition._getDuplicates(db, {fields:{week: 9}});
 };
 
 exports['use month view when doc has month property'] = function(test) {
   var db = {
-      view: function(ddoc, view, q , callback) {
+    medic: {
+      view: function(ddoc, view) {
           test.same(
               view,
               'data_records_by_form_year_month_clinic_id_and_reported_date'
           );
           test.done();
       }
+    }
   };
-  transition._getDuplicates(db, {month: 9});
+  transition._getDuplicates(db, {fields:{month: 9}});
 };
 
 exports['calls audit.bulkSave with correct arguments'] = function(test) {
   test.expect(7);
 
   var db = {
+    medic: {
       view: function() {}
+    }
   };
 
-  var view = sinon.stub(db, 'view').callsArgWith(3, null, {rows: []});
+  var view = sinon.stub(db.medic, 'view').callsArgWith(3, null, {rows: []});
 
   var audit = {
       bulkSave: function(docs, options, callback) {
@@ -148,8 +168,10 @@ exports['calls audit.bulkSave with correct arguments'] = function(test) {
       doc: {
           _id: 'abc',
           form: 'z',
-          year: 2013,
-          month: 4
+          fields: {
+            year: 2013,
+            month: 4
+          }
       }
   }, db, audit, function(err, complete) {
       test.equals(complete, true);
@@ -168,7 +190,9 @@ exports['only one record in duplicates, mark transition complete'] = function(te
 exports['remove duplicates and replace with latest doc'] = function(test) {
   test.expect(7);
   var db = {
-    view: function() {}
+    medic: {
+      view: function() {}
+    }
   };
   var audit = {
       bulkSave: function(docs, options, cb) {
@@ -178,7 +202,7 @@ exports['remove duplicates and replace with latest doc'] = function(test) {
           docs.forEach(function(doc) {
             if (doc._id === 'abc') {
               test.same(doc._rev, '1-dddd');
-              test.same(doc.pills, 22);
+              test.same(doc.fields.pills, 22);
             }
             if (doc._id === 'xyz') {
               test.same(doc._deleted, true);
@@ -187,7 +211,7 @@ exports['remove duplicates and replace with latest doc'] = function(test) {
           cb();
       }
   };
-  sinon.stub(db, 'view').callsArgWith(3, null, {
+  sinon.stub(db.medic, 'view').callsArgWith(3, null, {
     // ascending records
     rows: [
       {
@@ -196,9 +220,11 @@ exports['remove duplicates and replace with latest doc'] = function(test) {
           _id: 'abc',
           _rev: '1-dddd',
           form: 'z',
-          month: 4,
-          year: 2013,
-          pills: 12,
+          fields: {
+            month: 4,
+            year: 2013,
+            pills: 12
+          },
           reported_date: 100
         }
       },
@@ -208,9 +234,11 @@ exports['remove duplicates and replace with latest doc'] = function(test) {
           _id: 'xyz',
           _rev: '1-kkkk',
           form: 'z',
-          month: 4,
-          year: 2013,
-          pills: 22,
+          fields: {
+            month: 4,
+            year: 2013,
+            pills: 22
+          },
           reported_date: 200
         }
       }
@@ -222,9 +250,11 @@ exports['remove duplicates and replace with latest doc'] = function(test) {
         _id: 'xyz',
         _rev: '1-kkkk',
         form: 'z',
-        month: 4,
-        year: 2013,
-        pills: 22,
+        fields: {
+          month: 4,
+          year: 2013,
+          pills: 22
+        },
         reported_date: 200
     }
   };
@@ -233,4 +263,4 @@ exports['remove duplicates and replace with latest doc'] = function(test) {
     test.equals(bulkSave.callCount, 1);
     test.done();
   });
-}
+};

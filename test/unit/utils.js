@@ -8,38 +8,70 @@ var _ = require('underscore'),
 
 var restore = function(objs) {
     _.each(objs, function(obj) {
-        if (obj.restore) obj.restore();
+        if (obj.restore) {
+            obj.restore();
+        }
     });
-}
+};
 
 exports.tearDown = function(callback) {
     restore([
-        config.get,
-        db.view
+        db.medic.view,
+        config.getTranslations,
+        config.get
     ]);
     callback();
-}
+};
+
+exports['getVal supports string keys'] = function(test) {
+    var doc = {
+        lmp_date: '8000001'
+    };
+    test.equals(utils.getVal(doc, 'lmp_date'), '8000001');
+    test.equals(utils.getVal(doc, 'foo'), undefined);
+    // non-string keys return undefined
+    test.equals(utils.getVal(doc, 10), undefined);
+    test.done();
+};
+
+exports['getVal supports dot notation'] = function(test) {
+    var doc = {
+        fields: {
+            baz: '99938388',
+            bim: {
+              bop: 15,
+              bam: [1,2,3]
+            }
+        }
+    };
+    test.equals(utils.getVal(doc, 'fields.baz'), '99938388');
+    test.equals(utils.getVal(doc, 'fields.bim.bop'), 15);
+    test.same(utils.getVal(doc, 'fields.bim.bam'), [1,2,3]);
+    test.equals(utils.getVal(doc, 'fields.404'), undefined);
+    test.done();
+};
 
 exports['updateable returns true when _rev the same'] = function(test) {
     test.ok(utils.updateable({ _rev: '1' }, { _rev: '1', x: 1 }));
     test.done();
-}
+};
 
 exports['updateable returns false when _rev different'] = function(test) {
     test.equals(utils.updateable({ _rev: '1' }, { _rev: '2', x: 1 }), false);
     test.equals(utils.updateable({ _rev: '2' }, { _rev: '1', x: 1 }), false);
     test.done();
-}
+};
 
 exports['updateable returns false when objects the same'] = function(test) {
     test.equals(utils.updateable({ _rev: '1', x: 1 }, { _rev: '1', x: 1 }), false);
     test.done();
-}
+};
 
 exports['getClinicContactName gets name'] = function(test) {
     test.equal(utils.getClinicContactName({
-        related_entities: {
-            clinic: {
+        contact: {
+            parent: {
+                type: 'clinic',
                 contact: {
                     name: 'Y'
                 }
@@ -47,16 +79,16 @@ exports['getClinicContactName gets name'] = function(test) {
         }
     }), 'Y');
     test.done();
-}
+};
 
 exports['getClinicContactName gets returns health volunteer if miss'] = function(test) {
     test.equals(utils.getClinicContactName({
-        related_entities: {
-            clinic: { }
+        contact: {
+            parent: { }
         }
     }), 'health volunteer');
     test.done();
-}
+};
 
 exports['getClinicContactName gets name if contact'] = function(test) {
     test.equals(utils.getClinicContactName({
@@ -65,39 +97,41 @@ exports['getClinicContactName gets name if contact'] = function(test) {
         }
     }), 'Y');
     test.done();
-}
+};
 
 exports['getClinicName gets returns health volunteer if miss'] = function(test) {
     test.equal(utils.getClinicName({
-        related_entities: {
-            clinic: { }
+        contact: {
+            parent: { type: 'clinic' }
         }
     }), 'health volunteer');
     test.done();
-}
+};
 
 exports['getClinicName gets name if contact'] = function(test) {
     test.equal(utils.getClinicName({
         name: 'Y'
     }), 'Y');
     test.done();
-}
+};
 
 exports['getClinicName gets name'] = function(test) {
     test.equal(utils.getClinicName({
-        related_entities: {
-            clinic: {
+        contact: {
+            parent: {
+                type: 'clinic',
                 name: 'Y'
             }
         }
     }), 'Y');
     test.done();
-}
+};
 
 exports['getClinicPhone gets phone'] = function(test) {
     test.equal(utils.getClinicPhone({
-        related_entities: {
-            clinic: {
+        contact: {
+            parent: {
+                type: 'clinic',
                 contact: {
                     phone: '123'
                 }
@@ -105,7 +139,7 @@ exports['getClinicPhone gets phone'] = function(test) {
         }
     }), '123');
     test.done();
-}
+};
 
 exports['getClinicPhone gets phone if contact'] = function(test) {
     test.equal(utils.getClinicPhone({
@@ -114,7 +148,7 @@ exports['getClinicPhone gets phone if contact'] = function(test) {
         }
     }), '123');
     test.done();
-}
+};
 
 exports['addMessage adds uuid'] = function(test) {
     var doc = {},
@@ -141,7 +175,7 @@ exports['addMessage adds uuid'] = function(test) {
     test.equals(message.message, 'xxx');
     test.ok(message.uuid);
     test.done();
-}
+};
 
 exports['getRecentForm calls through to db view correctly'] = function(test) {
     
@@ -149,7 +183,7 @@ exports['getRecentForm calls through to db view correctly'] = function(test) {
     var clinicId = 'someClinicId';
     var result = [{_id: 'someRowId'}];
 
-    sinon.stub(db, 'view')
+    sinon.stub(db.medic, 'view')
         .withArgs(
             'kujua-sentinel', 
             'data_records_by_form_and_clinic', 
@@ -165,9 +199,10 @@ exports['getRecentForm calls through to db view correctly'] = function(test) {
     utils.getRecentForm({
         formName: formName, 
         doc: {
-            related_entities: {
-                clinic: {
-                    _id: clinicId
+            contact: {
+                parent: {
+                    _id: clinicId,
+                    type: 'clinic'
                 }
             }
         }
@@ -176,7 +211,7 @@ exports['getRecentForm calls through to db view correctly'] = function(test) {
         test.equals(data, result);
         test.done();
     });
-}
+};
 
 exports['addScheduledMessage creates a new scheduled task'] = function(test) {
 
@@ -205,7 +240,7 @@ exports['addScheduledMessage creates a new scheduled task'] = function(test) {
     test.ok(!!task.state_history[0].timestamp);
 
     test.done();
-}
+};
 
 exports['obsoleteScheduledMessages clears overdue tasks'] = function(test) {
 
@@ -244,7 +279,7 @@ exports['obsoleteScheduledMessages clears overdue tasks'] = function(test) {
     test.equals(doc.scheduled_tasks[2].state, 'scheduled');
 
     test.done();
-}
+};
 
 exports['obsoleteScheduledMessages appends to state_history'] = function(test) {
 
@@ -277,7 +312,7 @@ exports['obsoleteScheduledMessages appends to state_history'] = function(test) {
     test.ok(!!doc.scheduled_tasks[0].state_history[1].timestamp);
 
     test.done();
-}
+};
 
 exports['obsoleteScheduledMessages clears groups of obsolete messages'] = function(test) {
 
@@ -319,7 +354,7 @@ exports['obsoleteScheduledMessages clears groups of obsolete messages'] = functi
     test.equals(doc.scheduled_tasks[2].state, 'scheduled');
 
     test.done();
-}
+};
 
 exports['clearScheduledMessages clears all matching tasks'] = function(test) {
 
@@ -347,7 +382,7 @@ exports['clearScheduledMessages clears all matching tasks'] = function(test) {
     test.ok(!!doc.scheduled_tasks[0].state_history[0].timestamp);
     test.equals(doc.scheduled_tasks[1].state, 'scheduled');
     test.done();
-}
+};
 
 exports['unmuteScheduledMessages schedules all muted tasks'] = function(test) {
 
@@ -373,7 +408,7 @@ exports['unmuteScheduledMessages schedules all muted tasks'] = function(test) {
     test.equals(doc.scheduled_tasks[0].state_history[0].state, 'scheduled');
     test.ok(!!doc.scheduled_tasks[0].state_history[0].timestamp);
     test.done();
-}
+};
 
 exports['muteScheduledMessages mutes all scheduled tasks'] = function(test) {
 
@@ -395,7 +430,7 @@ exports['muteScheduledMessages mutes all scheduled tasks'] = function(test) {
     test.equals(doc.scheduled_tasks[0].state_history[0].state, 'muted');
     test.ok(!!doc.scheduled_tasks[0].state_history[0].timestamp);
     test.done();
-}
+};
 
 exports['applyPhoneFilters performs replace'] = function(test) {
 
@@ -417,26 +452,22 @@ exports['applyPhoneFilters performs replace'] = function(test) {
     test.equals(utils.applyPhoneFilters(config, '00101'), '9101');
     test.equals(utils.applyPhoneFilters(config, '456'), '456');
     test.equals(utils.applyPhoneFilters(config, '159841125'), '29841125');
-
     test.done();
-}
+};
 
 exports['translate returns message if key found in translations'] = function(test) {
-    sinon.stub(config, 'get').withArgs('translations').returns([
-        {
-          key: 'sms_received',
-          default: 'got it!'
-        }
-    ]);
+    sinon.stub(config, 'getTranslations').returns({
+        en: { sms_received: 'got it!' }
+    });
     test.equals(utils.translate('sms_received'), 'got it!');
     test.done();
-}
+};
 
 exports['translate returns key if translations not found'] = function(test) {
-    sinon.stub(config, 'get').withArgs('translations').returns([]);
+    sinon.stub(config, 'getTranslations').returns({});
     test.equals(utils.translate('sms_received'), 'sms_received');
     test.done();
-}
+};
 
 exports['describe isOutgoingAllowed'] = function(test) {
     /*
@@ -489,4 +520,3 @@ exports['describe _isMessageFromGateway'] = function(test) {
     });
     test.done();
 };
-

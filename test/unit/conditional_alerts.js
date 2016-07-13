@@ -6,9 +6,11 @@ var _ = require('underscore'),
 
 var restore = function(objs) {
     _.each(objs, function(obj) {
-        if (obj.restore) obj.restore();
+        if (obj.restore) {
+            obj.restore();
+        }
     });
-}
+};
 
 exports.tearDown = function(callback) {
     restore([
@@ -17,7 +19,7 @@ exports.tearDown = function(callback) {
         utils.getRecentForm
     ]);
     callback();
-}
+};
 
 exports['onMatch signature'] = function(test) {
     test.ok(_.isFunction(transition.onMatch));
@@ -37,6 +39,7 @@ exports['when document type is unknown do not pass filter'] = function(test) {
 };
 
 exports['when document type matches pass filter'] = function(test) {
+    sinon.stub(transition, '_getConfig').returns([{form: 'STCK'}]);
     test.equals(transition.filter({
         form: 'STCK',
         type: 'data_record'
@@ -235,14 +238,12 @@ exports['handle missing condition reference gracefully'] = function(test) {
             s1_avail: 0
         }]);
 
-    var messageFn = sinon.spy(messages, 'addMessage');
-
     var doc = {
         form: 'STCK'
     };
     test.expect(2);
     transition.onMatch({ doc: doc }, {}, {}, function(err, changed) {
-        test.equals(err, "Cannot read property 's1_avail' of undefined");
+        test.equals(err, 'Cannot read property \'s1_avail\' of undefined');
         test.equals(changed, false);
         test.done();
     });
@@ -364,10 +365,11 @@ exports['resolve the recipient if required'] = function(test) {
     test.expect(4);
     var doc = {
         form: 'STCK',
-        related_entities: {
-            clinic: {
+        contact: {
+            parent: {
                 parent: {
                     parent: {
+                        type: 'district_hospital',
                         contact: {
                             phone: phone
                         }

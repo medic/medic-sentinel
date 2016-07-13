@@ -6,9 +6,9 @@ var async = require('async'),
 
 module.exports = function(db, audit, callback) {
     var now = moment(date.getDate()),
-        overdue = now.clone().subtract('days', 7);
+        overdue = now.clone().subtract(7, 'days');
 
-    db.view('kujua-sentinel', 'due_tasks', {
+    db.medic.view('kujua-sentinel', 'due_tasks', {
         include_docs: true,
         endkey: now.toISOString(),
         startkey: overdue.toISOString()

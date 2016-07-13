@@ -4,33 +4,39 @@ var _ = require('underscore'),
     messages = require('../lib/messages'),
     moment = require('moment'),
     validation = require('../lib/validation'),
-    logger = require('../lib/logger'),
     utils = require('../lib/utils'),
     date = require('../date');
 
 module.exports = {
     filter: function(doc) {
-        function hasConfig(doc) {
-            var reports = module.exports.getAcceptedReports();
-            report = _.findWhere(reports, {
-                form: doc.form
-            });
-            return Boolean(report);
-        }
+        var self = module.exports;
         return Boolean(
             doc &&
             doc.form &&
             doc.reported_date &&
-            hasConfig(doc) &&
+            !self._hasRun(doc) &&
+            self._hasConfig(doc) &&
             utils.getClinicPhone(doc)
+        );
+    },
+    _hasConfig: function(doc) {
+        var self = module.exports;
+        return Boolean(_.findWhere(self.getAcceptedReports(), {
+            form: doc.form
+        }));
+    },
+    _hasRun: function(doc) {
+        return Boolean(
+            doc &&
+            doc.transitions &&
+            doc.transitions.accept_patient_reports
         );
     },
     getAcceptedReports: function() {
         return config.get('patient_reports') || [];
     },
     silenceRegistrations: function(options, callback) {
-        var doc = options.doc,
-            report = options.report,
+        var report = options.report,
             registrations = options.registrations;
 
         if (report.silence_type) {
@@ -114,7 +120,7 @@ module.exports = {
         if (options.silence_for) {
             silence_until = reported_date.clone();
             silence_until.add(date.getDuration(options.silence_for));
-        };
+        }
 
         return _.filter(utils.filterScheduledMessages(registration, types), function(msg) {
             var due = moment(msg.due),
@@ -125,9 +131,9 @@ module.exports = {
             // in the future.
             if (silence_until) {
                 matches = (
-                    due >= reported_date
-                    && due <= silence_until
-                    && msg.state === 'scheduled'
+                    due >= reported_date &&
+                    due <= silence_until &&
+                    msg.state === 'scheduled'
                 );
                 // capture first match for group matching
                 if (matches && !first) {
@@ -137,8 +143,8 @@ module.exports = {
                 return (first && first.group === msg.group);
             } else {
                 return (
-                    due >= reported_date
-                    && msg.state === 'scheduled'
+                    due >= reported_date &&
+                    msg.state === 'scheduled'
                 );
             }
         });
@@ -160,7 +166,7 @@ module.exports = {
             });
             audit.saveDoc(registration, callback);
         } else {
-            callback(null);
+            callback();
         }
     },
     validate: function(config, doc, callback) {
@@ -173,7 +179,7 @@ module.exports = {
 
         utils.getRegistrations({
             db: db,
-            id: doc.patient_id
+            id: doc.fields && doc.fields.patient_id
         }, function(err, registrations) {
             module.exports.matchRegistrations({
                 db: db,
@@ -194,7 +200,7 @@ module.exports = {
         });
 
         if (!report) {
-            return callback(null, false);
+            return callback();
         }
 
         module.exports.validate(report, doc, function(errors) {
@@ -208,7 +214,7 @@ module.exports = {
                             msgs.push(err.message);
                         } else if (err) {
                             msgs.push(err);
-                        };
+                        }
                     });
                     messages.addReply(doc, msgs.join('  '));
                 } else {

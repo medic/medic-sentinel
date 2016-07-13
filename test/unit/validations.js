@@ -1,5 +1,4 @@
-var underscore = require('underscore'),
-    moment = require('moment'),
+var moment = require('moment'),
     validation = require('../../lib/validation'),
     utils = require('../../lib/utils'),
     db = require('../../db'),
@@ -25,8 +24,8 @@ exports['validate handles pupil parse errors'] = function(test) {
         phone: '123'
     };
     var validations = [{
-        "property": "phone",
-        "rule": 'regex(bad no quotes)'
+        property: 'phone',
+        rule: 'regex(bad no quotes)'
     }];
     validation.validate(doc, validations, function(errors) {
         test.deepEqual(
@@ -40,11 +39,11 @@ exports['validate handles pupil parse errors'] = function(test) {
 exports['validate handles pupil regex'] = function(test) {
     test.expect(2);
     var validations = [{
-        "property": "phone",
-        "rule": "regex('^\\d+$')",
-        "message": [{
-            content: "Invalid phone {{phone}}.",
-            locale: "en"
+        property: 'phone',
+        rule: 'regex("^\\d+$")',
+        message: [{
+            content: 'Invalid phone {{phone}}.',
+            locale: 'en'
         }]
     }];
     validation.validate({phone: '123'}, validations, function(errors) {
@@ -66,8 +65,8 @@ exports['pass unique validation when no doc found'] = function(test) {
         rows: []
     });
     var validations = [{
-        "property": "patient_id",
-        "rule": "unique('patient_id')"
+        property: 'patient_id',
+        rule: 'unique("patient_id")'
     }];
     var doc = {
         _id: 'same',
@@ -93,8 +92,8 @@ exports['pass unique validation when doc is the same'] = function(test) {
         }]
     });
     var validations = [{
-        "property": "patient_id",
-        "rule": "unique('patient_id')"
+        property: 'patient_id',
+        rule: 'unique("patient_id")'
     }];
     var doc = {
         _id: 'same',
@@ -120,8 +119,8 @@ exports['pass unique validation when doc has errors'] = function(test) {
         }]
     });
     var validations = [{
-        "property": "patient_id",
-        "rule": "unique('patient_id')"
+        property: 'patient_id',
+        rule: 'unique("patient_id")'
     }];
     var doc = {
         _id: 'same',
@@ -147,11 +146,11 @@ exports['fail unique validation on doc with no errors'] = function(test) {
         }]
     });
     var validations = [{
-        "property": "xyz",
-        "rule": "unique('xyz')",
-        "message": [{
-            content: "Duplicate: {{xyz}}.",
-            locale: "en"
+        property: 'xyz',
+        rule: 'unique("xyz")',
+        message: [{
+            content: 'Duplicate: {{xyz}}.',
+            locale: 'en'
         }]
     }];
     var doc = {
@@ -181,11 +180,11 @@ exports['fail multiple field unique validation on doc with no errors'] = functio
         }]
     });
     var validations = [{
-        "property": "xyz",
-        "rule": "unique('xyz','abc')",
-        "message": [{
-            content: "Duplicate xyz {{xyz}} and abc {{abc}}.",
-            locale: "en"
+        property: 'xyz',
+        rule: 'unique("xyz","abc")',
+        message: [{
+            content: 'Duplicate xyz {{xyz}} and abc {{abc}}.',
+            locale: 'en'
         }]
     }];
     var doc = {
@@ -217,23 +216,23 @@ exports['pass uniqueWithin validation on old doc'] = function(test) {
         }]
     });
     var validations = [{
-        "property": "xyz",
-        "rule": "uniqueWithin('xyz','2 weeks')",
-        "message": [{
-            content: "Duplicate xyz {{xyz}}.",
-            locale: "en"
+        property: 'xyz',
+        rule: 'uniqueWithin("xyz","2 weeks")',
+        message: [{
+            content: 'Duplicate xyz {{xyz}}.',
+            locale: 'en'
         }]
     }];
     var doc = {
         _id: 'same',
         xyz: '444'
     };
+    //exists args { '0': { _id: 'same', xyz: '444', xyz_uniqueWithin: '' },
+    //    '1': 'xyz:"444" AND reported_date<date>:[1969-12-17T23:00:00.000 TO 3000-01-01T00:00:00]',
+    //      '2': [Function] }
     validation.validate(doc, validations, function(errors) {
-        // lucene date range query bug:
-        // https://github.com/rnewson/couchdb-lucene/issues/225
-        // fails: "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
-        // works: "yyyy-MM-dd'T'HH:mm:ss.SSS"
-        var start = moment().subtract('weeks', 2).toISOString().replace('Z','');
+        var start = moment().subtract(2, 'weeks').toISOString().replace(/Z$/,'');
+        //test.ok(fti.calledWith('data_records'));
         test.ok(fti.calledWith('data_records', {
             q: 'xyz:"444" AND reported_date<date>:[' + start + ' TO 3000-01-01T00:00:00]',
             include_docs: true
@@ -244,7 +243,6 @@ exports['pass uniqueWithin validation on old doc'] = function(test) {
             message: 'Duplicate xyz {{xyz}}.'
         }]);
         test.done();
-        
     });
 };
 
@@ -295,11 +293,11 @@ exports['pass exists validation when matching document'] = function(test) {
         }]
     });
     var validations = [{
-        "property": "parent_id",
-        "rule": "exists('REGISTRATION', 'patient_id')",
-        "message": [{
-            content: "Unknown patient {{parent_id}}.",
-            locale: "en"
+        property: 'parent_id',
+        rule: 'exists("REGISTRATION", "patient_id")',
+        message: [{
+            content: 'Unknown patient {{parent_id}}.',
+            locale: 'en'
         }]
     }];
     var doc = {
@@ -325,11 +323,11 @@ exports['fail exists validation when no matching document'] = function(test) {
         rows: []
     });
     var validations = [{
-        "property": "parent_id",
-        "rule": "exists('REGISTRATION', 'patient_id')",
-        "message": [{
-            content: "Unknown patient {{parent_id}}.",
-            locale: "en"
+        property: 'parent_id',
+        rule: 'exists("REGISTRATION", "patient_id")',
+        message: [{
+            content: 'Unknown patient {{parent_id}}.',
+            locale: 'en'
         }]
     }];
     var doc = {
@@ -361,11 +359,11 @@ exports['fail exists validation when matching document is same as this'] = funct
         }]
     });
     var validations = [{
-        "property": "parent_id",
-        "rule": "exists('REGISTRATION', 'patient_id')",
-        "message": [{
-            content: "Unknown patient {{parent_id}}.",
-            locale: "en"
+        property: 'parent_id',
+        rule: 'exists("REGISTRATION", "patient_id")',
+        message: [{
+            content: 'Unknown patient {{parent_id}}.',
+            locale: 'en'
         }]
     }];
     var doc = {

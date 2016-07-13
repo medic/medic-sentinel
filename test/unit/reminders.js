@@ -28,7 +28,7 @@ exports['reminders#execute is function'] = function(test) {
     test.expect(1);
     test.ok(_.isFunction(reminders.execute));
     test.done();
-}
+};
 
 exports['config with no reminders calls callback'] = function(test) {
     test.expect(1);
@@ -44,9 +44,9 @@ exports['config with three matching reminder calls runReminder thrice'] = functi
     test.expect(2);
     var runReminder;
     sinon.stub(config, 'get').returns([
-        {form:"x", cron:"x", message:"x"},
-        {form:"y", cron:"y", message:"y"},
-        {form:"z", cron:"z", message:"z"}
+        {form:'x', cron:'x', message:'x'},
+        {form:'y', cron:'y', message:'y'},
+        {form:'z', cron:'z', message:'z'}
     ]);
     runReminder = sinon.stub(reminders, 'runReminder').callsArgWith(1, null);
     reminders.execute({}, function(err) {
@@ -99,7 +99,7 @@ exports['matches reminder with moment if in last hour'] = function(test) {
         window.restore();
         test.done();
     });
-}
+};
 
 exports['runReminder decorates options with moment if found'] = function(test) {
     var sendReminders,
@@ -110,7 +110,7 @@ exports['runReminder decorates options with moment if found'] = function(test) {
     matchReminder = sinon.stub(reminders, 'matchReminder').callsArgWith(1, null, now);
     sendReminders = sinon.stub(reminders, 'sendReminders').callsArgWith(1, null);
 
-    reminders.runReminder(options, function(err) {
+    reminders.runReminder(options, function() {
         var moment = sendReminders.getCall(0).args[0].moment;
 
         test.ok(moment);
@@ -128,7 +128,8 @@ exports['does not match reminder if in next minute'] = function(test) {
 
     reminders.matchReminder({
         reminder: {
-            cron: (now.minutes() + 1) + ' ' + now.format('HH * * *') // will generate cron job matching the current hour but 1 minute into future
+             // generate cron job 1 minute into future
+            cron: now.clone().add(1, 'minute').format('m HH * * *')
         }
     }, function(err, matches) {
         test.equals(err, null);
@@ -136,7 +137,7 @@ exports['does not match reminder if in next minute'] = function(test) {
         test.equals(matches, false);
         test.done();
     });
-}
+};
 
 exports['does not match if previous to reminder'] = function(test) {
     var window = sinon.stub(reminders, 'getReminderWindow').callsArgWithAsync(1, null, moment().subtract(1, 'hour')),
@@ -188,7 +189,7 @@ exports['getClinics calls db.view'] = function(test) {
         test.ok(db.view.called);
         test.done();
     });
-}
+};
 
 exports['getClinics ignores clinics with matching sent_reminders'] = function(test) {
     var db,
@@ -253,7 +254,7 @@ exports['getClinics ignores clinics with matching sent_reminders'] = function(te
         test.equals(clinics.length, 3);
         test.done();
     });
-}
+};
 
 exports['sendReminders calls sendReminder for each clinic'] = function(test) {
     var clinics,
@@ -272,11 +273,11 @@ exports['sendReminders calls sendReminder for each clinic'] = function(test) {
     getClinics = sinon.stub(reminders, 'getClinics').callsArgWith(1, null, clinics);
     sendReminder = sinon.stub(reminders, 'sendReminder').callsArgWithAsync(1, null);
 
-    reminders.sendReminders({}, function(err) {
+    reminders.sendReminders({}, function() {
         test.equals(sendReminder.callCount, 2);
         test.done();
     });
-}
+};
 
 exports['sendReminder saves doc with added task to clinic'] = function(test) {
     var db,
@@ -284,10 +285,12 @@ exports['sendReminder saves doc with added task to clinic'] = function(test) {
         saveDoc;
 
     db = {
-        saveDoc: function() {}
+        medic: {
+            insert: function() {}
+        }
     };
 
-    saveDoc = sinon.stub(db, 'saveDoc').callsArgWithAsync(1, null);
+    saveDoc = sinon.stub(db.medic, 'insert').callsArgWithAsync(1, null);
 
     reminders.sendReminder({
         clinic: {
@@ -301,7 +304,7 @@ exports['sendReminder saves doc with added task to clinic'] = function(test) {
         },
         moment: now,
         db: db
-    }, function(err) {
+    }, function() {
         var clinic,
             message,
             task;
@@ -349,7 +352,7 @@ exports['canSend returns true if no tasks matching reminder'] = function(test) {
 
     test.equals(canSend, true);
     test.done();
-}
+};
 
 exports['canSend returns false if a task matches reminder'] = function(test) {
     var canSend,
@@ -375,7 +378,7 @@ exports['canSend returns false if a task matches reminder'] = function(test) {
 
     test.equals(canSend, false);
     test.done();
-}
+};
 
 exports['canSend returns false if a sent_forms within lockout period of reminder'] = function(test) {
     var canSend,
@@ -396,7 +399,7 @@ exports['canSend returns false if a sent_forms within lockout period of reminder
 
     test.equals(canSend, false);
     test.done();
-}
+};
 
 exports['canSend returns true if a sent_forms outside of lockout period of reminder'] = function(test) {
     var canSend,
@@ -417,7 +420,7 @@ exports['canSend returns true if a sent_forms outside of lockout period of remin
 
     test.equals(canSend, true);
     test.done();
-}
+};
 
 exports['getReminderWindow returns a day ago when no results from db'] = function(test) {
     var db,

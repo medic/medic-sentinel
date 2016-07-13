@@ -1,9 +1,8 @@
 var _ = require('underscore'),
-    sinon = require('sinon'),
     moment = require('moment'),
     schedules = require('../../lib/schedules');
 
-exports['signature'] = function(test) {
+exports['function signature'] = function(test) {
     test.ok(_.isFunction(schedules.assignSchedule));
     test.equals(schedules.assignSchedule.length, 2);
     test.done();
@@ -35,23 +34,23 @@ exports['assignSchedule returns false if already has scheduled_task for that nam
     };
 
     var added = schedules.assignSchedule(doc, {
-        name: "duckland",
+        name: 'duckland',
         start_from: 'lmp_date',
         messages: [
             {
                 group: 1,
                 offset: '1 week',
                 message: [{
-                    "content": "This is for serial number {{serial_number}}.",
-                    "locale": "en"
+                    content: 'This is for serial number {{serial_number}}.',
+                    locale: 'en'
                 }]
             },
             {
                 group: 4,
                 offset: '81 days',
                 message: [{
-                    "content": "This is for serial number {{serial_number}}.",
-                    "locale": "en"
+                    content: 'This is for serial number {{serial_number}}.',
+                    locale: 'en'
                 }]
             }
         ]
@@ -60,7 +59,7 @@ exports['assignSchedule returns false if already has scheduled_task for that nam
     test.equals(added, false);
     test.equals(doc.scheduled_tasks.length, 1);
     test.done();
-}
+};
 
 exports['schedule generates two messages'] = function(test) {
 
@@ -78,16 +77,16 @@ exports['schedule generates two messages'] = function(test) {
                 group: 1,
                 offset: '1 week',
                 message: [{
-                    content: "This is for serial number {{serial_number}}.",
-                    locale: "en"
+                    content: 'This is for serial number {{serial_number}}.',
+                    locale: 'en'
                 }]
             },
             {
                 group: 4,
                 offset: '81 days',
                 message: [{
-                    content: "This is for serial number {{serial_number}}.",
-                    locale: "en"
+                    content: 'This is for serial number {{serial_number}}.',
+                    locale: 'en'
                 }]
             }
         ]
@@ -99,12 +98,12 @@ exports['schedule generates two messages'] = function(test) {
     test.equals(moment(doc.scheduled_tasks[1].due).diff(doc.reported_date, 'days'), 81);
 
     test.done();
-}
+};
 
 exports['scheduled due timestamp respects timezone'] = function(test) {
     var doc = {
         form: 'x',
-        reported_date: "2050-03-13T13:06:22.002Z"
+        reported_date: '2050-03-13T13:06:22.002Z'
     };
     var added = schedules.assignSchedule(doc, {
         name: 'duckland',
@@ -115,8 +114,8 @@ exports['scheduled due timestamp respects timezone'] = function(test) {
                 offset: '1 day',
                 send_time: '08:00 +00:00',
                 message: [{
-                    "content": "This is for serial number {{serial_number}}.",
-                    "locale": "en"
+                    content: 'This is for serial number {{serial_number}}.',
+                    locale: 'en'
                 }]
             }
         ]
@@ -125,15 +124,15 @@ exports['scheduled due timestamp respects timezone'] = function(test) {
     test.equals(doc.scheduled_tasks.length, 1);
     test.equals(
         moment(doc.scheduled_tasks[0].due).toISOString(),
-        "2050-03-14T08:00:00.000Z"
+        '2050-03-14T08:00:00.000Z'
     );
     test.done();
-}
+};
 
 exports['scheduled due timestamp respects send_day Monday'] = function(test) {
     var doc = {
         form: 'x',
-        reported_date: "2050-03-13T13:06:22.002Z"
+        reported_date: '2050-03-13T13:06:22.002Z'
     };
     var added = schedules.assignSchedule(doc, {
         name: 'duckland',
@@ -144,8 +143,8 @@ exports['scheduled due timestamp respects send_day Monday'] = function(test) {
                 offset: '2 weeks',
                 send_day: 'Monday',
                 message: [{
-                    "content": "Woot",
-                    "locale": "en"
+                    content: 'Woot',
+                    locale: 'en'
                 }]
             }
         ]
@@ -153,20 +152,16 @@ exports['scheduled due timestamp respects send_day Monday'] = function(test) {
     test.equals(added, true);
     test.equals(doc.scheduled_tasks.length, 1);
     test.equals(
-        moment(doc.scheduled_tasks[0].due).toISOString(),
-        "2050-03-28T13:06:22.002Z"
-    );
-    test.equals(
         moment(doc.scheduled_tasks[0].due).format('dddd'),
-        "Monday"
+        'Monday'
     );
     test.done();
-}
+};
 
 exports['scheduled due timestamp respects send_day Wednesday'] = function(test) {
     var doc = {
         form: 'x',
-        reported_date: "2050-03-13T13:06:22.002Z"
+        reported_date: '2050-03-13T13:06:22.002Z'
     };
     var added = schedules.assignSchedule(doc, {
         name: 'duckland',
@@ -177,8 +172,8 @@ exports['scheduled due timestamp respects send_day Wednesday'] = function(test) 
                 offset: '2 weeks',
                 send_day: 'Wednesday',
                 message: [{
-                    "content": "Woot",
-                    "locale": "en"
+                    content: 'Woot',
+                    locale: 'en'
                 }]
             }
         ]
@@ -186,20 +181,16 @@ exports['scheduled due timestamp respects send_day Wednesday'] = function(test) 
     test.equals(added, true);
     test.equals(doc.scheduled_tasks.length, 1);
     test.equals(
-        moment(doc.scheduled_tasks[0].due).toISOString(),
-        "2050-03-30T13:06:22.002Z"
-    );
-    test.equals(
         moment(doc.scheduled_tasks[0].due).format('dddd'),
-        "Wednesday"
+        'Wednesday'
     );
     test.done();
-}
+};
 
 exports['scheduled due timestamp respects send_day and send_time'] = function(test) {
     var doc = {
         form: 'x',
-        reported_date: "2050-03-13T13:06:22.002Z"
+        reported_date: '2050-03-13T13:06:22.002Z'
     };
     var added = schedules.assignSchedule(doc, {
         name: 'duckland',
@@ -211,8 +202,8 @@ exports['scheduled due timestamp respects send_day and send_time'] = function(te
                 send_day: 'Wednesday',
                 send_time: '08:00 +0000',
                 message: [{
-                    "content": "Woot",
-                    "locale": "en"
+                    content: 'Woot',
+                    locale: 'en'
                 }]
             }
         ]
@@ -221,19 +212,19 @@ exports['scheduled due timestamp respects send_day and send_time'] = function(te
     test.equals(doc.scheduled_tasks.length, 1);
     test.equals(
         moment(doc.scheduled_tasks[0].due).toISOString(),
-        "2050-03-30T08:00:00.000Z"
+        '2050-03-30T08:00:00.000Z'
     );
     test.equals(
         moment(doc.scheduled_tasks[0].due).format('dddd'),
-        "Wednesday"
+        'Wednesday'
     );
     test.done();
-}
+};
 
 exports['scheduled item without message is skipped'] = function(test) {
     var doc = {
         form: 'x',
-        reported_date: "2050-03-13T13:06:22.002Z"
+        reported_date: '2050-03-13T13:06:22.002Z'
     };
     var added = schedules.assignSchedule(doc, {
         name: 'duckland',
@@ -243,19 +234,19 @@ exports['scheduled item without message is skipped'] = function(test) {
                 group: 1,
                 offset: '1 day',
                 send_time: '08:00 +00:00',
-                message: ""
+                message: ''
             }
         ]
     });
     test.equals(added, false);
     test.ok(!doc.scheduled_tasks);
     test.done();
-}
+};
 
 exports['scheduled item with only spaces message is skipped'] = function(test) {
     var doc = {
         form: 'x',
-        reported_date: "2050-03-13T13:06:22.002Z"
+        reported_date: '2050-03-13T13:06:22.002Z'
     };
     var added = schedules.assignSchedule(doc, {
         name: 'duckland',
@@ -266,8 +257,8 @@ exports['scheduled item with only spaces message is skipped'] = function(test) {
                 offset: '1 day',
                 send_time: '08:00 +00:00',
                 message: [{
-                    "content": "  ",
-                    "locale": "en"
+                    content: '  ',
+                    locale: 'en'
                 }]
             }
         ]
@@ -275,7 +266,7 @@ exports['scheduled item with only spaces message is skipped'] = function(test) {
     test.equals(added, false);
     test.ok(!doc.scheduled_tasks);
     test.done();
-}
+};
 
 exports['schedule does not generate messages in past'] = function(test) {
     var added,
@@ -295,16 +286,16 @@ exports['schedule does not generate messages in past'] = function(test) {
                 group: 1,
                 offset: '1 week',
                 message: [{
-                    "content": "This is for serial number {{serial_number}}.",
-                    "locale": "en"
+                    content: 'This is for serial number {{serial_number}}.',
+                    locale: 'en'
                 }]
             },
             {
                 group: 4,
                 offset: '20 weeks',
                 message: [{
-                    "content": "This is for serial number {{serial_number}}.",
-                    "locale": "en"
+                    content: 'This is for serial number {{serial_number}}.',
+                    locale: 'en'
                 }]
             }
         ]
@@ -316,21 +307,14 @@ exports['schedule does not generate messages in past'] = function(test) {
     test.equals(moment(doc.scheduled_tasks[0].due).diff(doc.some_date, 'weeks'), 20);
 
     test.done();
-}
+};
 
 exports['when start from is null skip schedule creation'] = function(test) {
     var added;
 
     var doc = {
         form: 'x',
-        reported_date: null,
-        related_entities: {
-            clinic: {
-                contact: {
-                    phone: '123'
-                }
-            }
-        }
+        reported_date: null
     };
 
     added = schedules.assignSchedule(doc, {
@@ -341,16 +325,16 @@ exports['when start from is null skip schedule creation'] = function(test) {
                 group: 1,
                 offset: '1 week',
                 message: [{
-                    "content": "This is for serial number {{serial_number}}.",
-                    "locale": "en"
+                    content: 'This is for serial number {{serial_number}}.',
+                    locale: 'en'
                 }]
             },
             {
                 group: 4,
                 offset: '81 days',
                 message: [{
-                    "content": "This is for serial number {{serial_number}}.",
-                    "locale": "en"
+                    content: 'This is for serial number {{serial_number}}.',
+                    locale: 'en'
                 }]
             }
         ]
@@ -359,7 +343,7 @@ exports['when start from is null skip schedule creation'] = function(test) {
     test.equals(added, true);
     test.ok(!doc.scheduled_tasks);
     test.done();
-}
+};
 
 exports['alreadyRun validation'] = function(test) {
     test.equals(schedules.alreadyRun({}, 'x'), false);
@@ -376,7 +360,7 @@ exports['alreadyRun validation'] = function(test) {
                 name: 'x'
             }
         ]
-    }, 'x'), true)
+    }, 'x'), true);
     test.equals(schedules.alreadyRun({
         tasks: [
             {

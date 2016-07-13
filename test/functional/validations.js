@@ -1,7 +1,5 @@
-var _ = require('underscore'),
-    sinon = require('sinon'),
-    transition = require('../../transitions/accept_patient_reports'),
-    utils = require('../../lib/utils');
+var sinon = require('sinon'),
+    transition = require('../../transitions/accept_patient_reports');
 
 /*
  * Eventually transitions/registration.js and accept_patient_reports.js will
@@ -9,16 +7,17 @@ var _ = require('underscore'),
  * */
 
 exports.tearDown = function(callback) {
-    if (transition.getAcceptedReports.restore)
+    if (transition.getAcceptedReports.restore) {
         transition.getAcceptedReports.restore();
+    }
     callback();
-}
+};
 
 exports.setUp = function(callback) {
     // not required since these tests never pass pupil validations
     // sinon.stub(utils, 'getRegistrations').callsArgWithAsync(1, null, []);
     callback();
-}
+};
 
 exports['patient id failing validation adds error'] = function(test) {
     test.expect(3);
@@ -32,10 +31,10 @@ exports['patient id failing validation adds error'] = function(test) {
         validations: {
             list: [{
                 property: 'patient_id',
-                rule: "regex('\\w{5}')",
+                rule: 'regex("\\w{5}")',
                 message: [{
-                    content: "bad id {{patient_id}}",
-                    locale: "en"
+                    content: 'bad id {{patient_id}}',
+                    locale: 'en'
                 }]
             }]
         },
@@ -50,7 +49,7 @@ exports['patient id failing validation adds error'] = function(test) {
         test.equals(doc.errors[0].message, 'bad id xxxx');
         test.done();
     });
-}
+};
 
 exports['join responses concats validation response msgs'] = function(test) {
     test.expect(5);
@@ -58,7 +57,7 @@ exports['join responses concats validation response msgs'] = function(test) {
     var doc = {
         from: '+123',
         patient_id: '123',
-        patient_name: 'sam',
+        fields: { patient_name: 'sam' },
         form: 'x'
     };
 
@@ -68,7 +67,7 @@ exports['join responses concats validation response msgs'] = function(test) {
             list: [
                 {
                     property: 'patient_id',
-                    rule: "regex('\\w{5}')",
+                    rule: 'regex("\\w{5}")',
                     message: [{
                         content: 'patient id should be 5 characters',
                         locale: 'en'
@@ -76,7 +75,7 @@ exports['join responses concats validation response msgs'] = function(test) {
                 },
                 {
                     property: 'patient_name',
-                    rule: "lenMin(5) && lenMax(50)",
+                    rule: 'lenMin(5) && lenMax(50)',
                     message: [{
                         content: 'patient name should be between 5 and 50 chars.',
                         locale: 'en'
@@ -104,19 +103,20 @@ exports['join responses concats validation response msgs'] = function(test) {
         // response should include all validation response messages
         test.equals(
             doc.tasks[0].messages[0].message,
-            'patient id should be 5 characters'
-            + '  ' + 'patient name should be between 5 and 50 chars.'
+            'patient id should be 5 characters  ' +
+            'patient name should be between 5 and 50 chars.'
         );
         test.done();
     });
-}
+};
+
 exports['false join_responses does not concat validation msgs'] = function(test) {
     test.expect(5);
 
     var doc = {
         from: '+123',
         patient_id: '123',
-        patient_name: 'sam',
+        fields: { patient_name: 'sam' },
         form: 'x'
     };
 
@@ -126,7 +126,7 @@ exports['false join_responses does not concat validation msgs'] = function(test)
             list: [
                 {
                     property: 'patient_id',
-                    rule: "regex('\\w{5}')",
+                    rule: 'regex("\\w{5}")',
                     message: [{
                         content: 'patient id should be 5 characters',
                         locale: 'en'
@@ -134,7 +134,7 @@ exports['false join_responses does not concat validation msgs'] = function(test)
                 },
                 {
                     property: 'patient_name',
-                    rule: "lenMin(5) && lenMax(50)",
+                    rule: 'lenMin(5) && lenMax(50)',
                     message: [{
                         content: 'patient name should be between 5 and 50 chars.',
                         locale: 'en'
@@ -166,7 +166,7 @@ exports['false join_responses does not concat validation msgs'] = function(test)
         );
         test.done();
     });
-}
+};
 
 exports['undefined join_responses does not concat validation msgs'] = function(test) {
     test.expect(5);
@@ -174,7 +174,7 @@ exports['undefined join_responses does not concat validation msgs'] = function(t
     var doc = {
         from: '+123',
         patient_id: '123',
-        patient_name: 'sam',
+        fields: { patient_name: 'sam' },
         form: 'x'
     };
 
@@ -183,7 +183,7 @@ exports['undefined join_responses does not concat validation msgs'] = function(t
             list: [
                 {
                     property: 'patient_id',
-                    rule: "regex('\\w{5}')",
+                    rule: 'regex("\\w{5}")',
                     message: [{
                         content: 'patient id should be 5 characters',
                         locale: 'en'
@@ -191,7 +191,7 @@ exports['undefined join_responses does not concat validation msgs'] = function(t
                 },
                 {
                     property: 'patient_name',
-                    rule: "lenMin(5) && lenMax(50)",
+                    rule: 'lenMin(5) && lenMax(50)',
                     message: [{
                         content: 'patient name should be between 5 and 50 chars.',
                         locale: 'en'
@@ -223,4 +223,4 @@ exports['undefined join_responses does not concat validation msgs'] = function(t
         );
         test.done();
     });
-}
+};

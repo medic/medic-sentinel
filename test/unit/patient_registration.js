@@ -1,27 +1,19 @@
 var _ = require('underscore'),
     transition = require('../../transitions/registration'),
     sinon = require('sinon'),
-    moment = require('moment'),
-    utils = require('../../lib/utils'),
-    related_entities;
-
-related_entities = {
-    clinic: {
-        contact: {
-            phone: '+1234',
-            name: 'Julie'
-        }
-    }
-};
+    utils = require('../../lib/utils');
 
 function getMessage(doc, idx) {
-    if (!doc || !doc.tasks) return;
-    if (idx) {
-        if (!doc.tasks[idx]) return;
-        return _.first(doc.tasks[idx].messages);
-    } else {
-        return _.first(_.first(doc.tasks).messages);
+    if (!doc || !doc.tasks) {
+        return;
     }
+    if (idx) {
+        if (!doc.tasks[idx]) {
+            return;
+        }
+        return _.first(doc.tasks[idx].messages);
+    }
+    return _.first(_.first(doc.tasks).messages);
 }
 
 exports.setUp = function(callback) {
@@ -29,10 +21,10 @@ exports.setUp = function(callback) {
         form: 'PATR',
         events: [
            {
-               "name": "on_create",
-               "trigger": "add_patient_id",
-               "params": "",
-               "bool_expr": ""
+               name: 'on_create',
+               trigger: 'add_patient_id',
+               params: '',
+               bool_expr: ''
            }
         ],
         validations: [
@@ -46,28 +38,28 @@ exports.setUp = function(callback) {
             {
                 message: [
                     {
-                        content: "thanks {{contact.name}}",
-                        locale: "en"
+                        content: 'thanks {{contact.name}}',
+                        locale: 'en'
                     },
                     {
-                        content: "gracias {{contact.name}}",
-                        locale: "es"
+                        content: 'gracias {{contact.name}}',
+                        locale: 'es'
                     }
                 ],
-                recipient: "reporting_unit",
+                recipient: 'reporting_unit',
             },
             {
                 message: [
                     {
-                        content: "thanks {{caregiver_name}}",
-                        locale: "en"
+                        content: 'thanks {{fields.caregiver_name}}',
+                        locale: 'en'
                     },
                     {
-                        content: "gracias {{caregiver_name}}",
-                        locale: "es"
+                        content: 'gracias {{fields.caregiver_name}}',
+                        locale: 'es'
                     }
                 ],
-                recipient: "caregiver_phone",
+                recipient: 'caregiver_phone',
             }
         ]
     }]);
@@ -84,48 +76,48 @@ exports.tearDown = function(callback) {
     }
 
     callback();
-}
+};
 
 exports['getWeeksSinceLMP returns 0 not NaN or null'] = function(test) {
-    test.equals(transition.getWeeksSinceLMP({lmp: 0}), 0);
-    test.equals(typeof transition.getWeeksSinceLMP({lmp: 0}), 'number');
-    test.equals(transition.getWeeksSinceLMP({weeks_since_lmp: 0}), 0);
-    test.equals(typeof transition.getWeeksSinceLMP({weeks_since_lmp: 0}), 'number');
-    test.equals(transition.getWeeksSinceLMP({last_menstrual_period: 0}), 0);
-    test.equals(typeof transition.getWeeksSinceLMP({last_menstrual_period: 0}), 'number');
+    test.equals(transition.getWeeksSinceLMP({ fields: { lmp: 0 } }), 0);
+    test.equals(typeof transition.getWeeksSinceLMP({ fields: { lmp: 0 } }), 'number');
+    test.equals(transition.getWeeksSinceLMP({ fields: { weeks_since_lmp: 0 } }), 0);
+    test.equals(typeof transition.getWeeksSinceLMP({ fields: { weeks_since_lmp: 0 } }), 'number');
+    test.equals(transition.getWeeksSinceLMP({ fields: { last_menstrual_period: 0 } }), 0);
+    test.equals(typeof transition.getWeeksSinceLMP({ fields: { last_menstrual_period: 0 } }), 'number');
     test.done();
 };
 
 exports['getWeeksSinceLMP always returns number'] = function(test) {
-    test.equals(transition.getWeeksSinceLMP({lmp: '12'}), 12);
+    test.equals(transition.getWeeksSinceLMP({ fields: { lmp: '12' } }), 12);
     test.done();
 };
 
 exports['getWeeksSinceDOB always returns string'] = function(test) {
-    test.equals(typeof transition.getWeeksSinceDOB({dob: '4'}), 'string');
-    test.equals(typeof transition.getWeeksSinceDOB({dob: '0'}), 'string');
-    test.equals(typeof transition.getWeeksSinceDOB({dob: 0}), 'string');
+    test.equals(typeof transition.getWeeksSinceDOB({ fields: {  dob: '4' } }), 'string');
+    test.equals(typeof transition.getWeeksSinceDOB({ fields: {  dob: '0' } }), 'string');
+    test.equals(typeof transition.getWeeksSinceDOB({ fields: {  dob: 0 } }), 'string');
     test.done();
 };
 
 exports['getWeeksSinceLMP supports three property names'] = function(test) {
-    test.equals(transition.getWeeksSinceLMP({lmp: '12'}), 12);
-    test.equals(transition.getWeeksSinceLMP({weeks_since_lmp: '12'}), 12);
-    test.equals(transition.getWeeksSinceLMP({last_menstrual_period: '12'}), 12);
+    test.equals(transition.getWeeksSinceLMP({ fields: { lmp: '12' } }), 12);
+    test.equals(transition.getWeeksSinceLMP({ fields: { weeks_since_lmp: '12' } }), 12);
+    test.equals(transition.getWeeksSinceLMP({ fields: { last_menstrual_period: '12' } }), 12);
     test.done();
 };
 
 exports['getWeeksSinceDOB supports four property names'] = function(test) {
-    test.equals(transition.getWeeksSinceDOB({dob: '12'}), 12);
-    test.equals(transition.getWeeksSinceDOB({weeks_since_dob: '12'}), 12);
-    test.equals(transition.getWeeksSinceDOB({weeks_since_birth: '12'}), 12);
-    test.equals(transition.getWeeksSinceDOB({age_in_weeks: '12'}), 12);
+    test.equals(transition.getWeeksSinceDOB({ fields: { dob: '12' } }), 12);
+    test.equals(transition.getWeeksSinceDOB({ fields: { weeks_since_dob: '12' } }), 12);
+    test.equals(transition.getWeeksSinceDOB({ fields: { weeks_since_birth: '12' } }), 12);
+    test.equals(transition.getWeeksSinceDOB({ fields: { age_in_weeks: '12' } }), 12);
     test.done();
 };
 
 exports['isBoolExprFalse returns false/true based on regex'] = function(test) {
-    var regex1 = "/^\\s*[5]\\d+/.test(doc.foo)",
-        regex2 = "/^\\s*[3]\\d+/.test(doc.foo)",
+    var regex1 = '/^\\s*[5]\\d+/.test(doc.foo)',
+        regex2 = '/^\\s*[3]\\d+/.test(doc.foo)',
         doc = {
             foo: '533884'
         };
@@ -142,7 +134,7 @@ exports['valid form adds patient_id'] = function(test) {
 
     var doc = {
         form: 'PATR',
-        patient_name: 'abc'
+        fields: { patient_name: 'abc' }
     };
 
     transition.onMatch({
@@ -163,16 +155,14 @@ exports['registration sets up responses'] = function(test) {
     var doc = {
         form: 'PATR',
         from: '+1234',
-        patient_name: 'foo',
-        caregiver_name: 'Sam',
-        caregiver_phone: '+987',
-        related_entities: {
-            clinic: {
-                contact: {
-                    phone: '+1234',
-                    name: 'Julie'
-                }
-            }
+        fields: {
+            patient_name: 'foo',
+            caregiver_name: 'Sam',
+            caregiver_phone: '+987',
+        },
+        contact: {
+            phone: '+1234',
+            name: 'Julie'
         },
         locale: 'en'
     };
@@ -224,10 +214,21 @@ exports['registration responses support locale'] = function(test) {
 
     var doc = {
         form: 'PATR',
-        patient_name: 'foo',
-        caregiver_name: 'Sam',
-        caregiver_phone: '+987',
-        related_entities: related_entities,
+        fields: {
+            patient_name: 'foo',
+            caregiver_name: 'Sam',
+            caregiver_phone: '+987',
+        },
+        contact: {
+            phone: '+1234',
+            name: 'Julie',
+            parent: {
+                contact: {
+                    phone: '+1234',
+                    name: 'Julie'
+                }
+            }
+        },
         locale: 'es' //spanish
     };
 

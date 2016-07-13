@@ -1,11 +1,45 @@
 var async = require('async'),
     _ = require('underscore'),
-    mustache = require('mustache'),
     config = require('../config'),
     utils = require('../lib/utils'),
-    logger = require('../lib/logger'),
     messages = require('../lib/messages'),
     validation = require('../lib/validation');
+
+var getMessage = function(config, eventType) {
+    var msg = _.findWhere(config.messages, { event_type: eventType });
+    return msg && msg.message;
+};
+
+var getEventType = function(config, doc) {
+    if (!config.on_form && !config.off_form) {
+        // no configured on or off forms
+        return false;
+    }
+    var mute;
+    if (utils.isFormCodeSame(config.on_form, doc.form)) {
+        mute = false;
+    } else if (utils.isFormCodeSame(config.off_form, doc.form)) {
+        mute = true;
+    } else {
+        // transition does not apply; return false
+        return false;
+    }
+    var eventType = mute ? 'on_mute' : 'on_unmute';
+    var msg = getMessage(config, eventType);
+    if (!msg) {
+        // no configured message for the given eventType
+        return false;
+    }
+    return { mute: mute, type: eventType };
+};
+
+var hasRun = function(doc) {
+    return Boolean(
+        doc &&
+        doc.transitions &&
+        doc.transitions.update_notifications
+    );
+};
 
 module.exports = {
     _addErr: function(event_type, config, doc) {
@@ -43,6 +77,7 @@ module.exports = {
             doc &&
             doc.form &&
             doc.patient_id &&
+            !hasRun(doc) &&
             utils.getClinicPhone(doc)
         );
     },
@@ -52,14 +87,14 @@ module.exports = {
     modifyRegistration: function(options, callback) {
         var mute = options.mute,
             registration = options.registration,
-            db = options.db;
+            audit = options.audit;
 
         if (mute) {
             utils.muteScheduledMessages(registration);
         } else {
             utils.unmuteScheduledMessages(registration);
         }
-        db.saveDoc(registration, callback);
+        audit.saveDoc(registration, callback);
     },
     validate: function(config, doc, callback) {
         var validations = config.validations && config.validations.list;
@@ -70,17 +105,9 @@ module.exports = {
             doc = change.doc,
             patient_id = doc.patient_id,
             config = module.exports.getConfig(),
-            mute;
+            eventType = getEventType(config, doc);
 
-        if (!config.on_form && !config.off_form) {
-            // not configured; bail
-            return callback(null, false);
-        } else if (utils.isFormCodeSame(config.on_form, doc.form)) {
-            mute = false;
-        } else if (utils.isFormCodeSame(config.off_form, doc.form)) {
-            mute = true;
-        } else {
-            // transition does not apply; return false
+        if (!eventType) {
             return callback(null, false);
         }
 
@@ -95,7 +122,7 @@ module.exports = {
                             msgs.push(err.message);
                         } else if (err) {
                             msgs.push(err);
-                        };
+                        }
                     });
                     messages.addReply(doc, msgs.join('  '));
                 } else {
@@ -112,7 +139,7 @@ module.exports = {
                 if (err) {
                     callback(err);
                 } else if (registrations.length) {
-                    if (mute) {
+                    if (eventType.mute) {
                         if (config.confirm_deactivation) {
                             self._addErr('confirm_deactivation', config, doc);
                             self._addMsg('confirm_deactivation', config, doc, registrations);
@@ -125,8 +152,8 @@ module.exports = {
                     }
                     async.each(registrations, function(registration, callback) {
                         self.modifyRegistration({
-                            db: audit,
-                            mute: mute,
+                            audit: audit,
+                            mute: eventType.mute,
                             registration: registration.doc
                         }, callback);
                     }, function(err) {

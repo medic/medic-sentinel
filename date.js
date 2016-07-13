@@ -2,14 +2,13 @@ var DATE_RE = /(\d{4})(\d{2})(\d{2})(\d{2})?(\d{2})?/,
     sd = require('./config').get('synthetic_date'),
     start_date = new Date(),
     moment = require('moment'),
-    synth_start_date = undefined;
+    synth_start_date;
 
 function load() {
     if (sd) {
       var matches =  String(sd).match(DATE_RE);
       if (matches) {
-          var fullmatch = matches[0],
-              year = matches[1],
+          var year = matches[1],
               month = matches[2],
               day = matches[3],
               // default hours to noon so catches send window
@@ -28,18 +27,21 @@ function load() {
 // time mode
 function getTimestamp() {
     var now = new Date().valueOf();
-    if (isSynthetic())
+    if (isSynthetic()) {
         return (now - start_date.valueOf()) + synth_start_date.valueOf();
+    }
     return now;
-};
+}
 function isSynthetic() {
-    if (synth_start_date)
+    if (synth_start_date) {
         return true;
+    }
     return false;
 }
 function getDate() {
-    if (synth_start_date)
+    if (synth_start_date) {
         return new Date(synth_start_date.valueOf());
+    }
     return new Date();
 }
 module.exports = {

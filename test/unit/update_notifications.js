@@ -5,7 +5,9 @@ var _ = require('underscore'),
 
 var restore = function(objs) {
     _.each(objs, function(obj) {
-        if (obj.restore) obj.restore();
+        if (obj.restore) {
+            obj.restore();
+        }
     });
 };
 
@@ -30,19 +32,19 @@ exports['filter signature'] = function(test) {
     test.done();
 };
 
-exports['filter tests: empty doc does not match'] = function(test) {
+exports['filter empty doc does not match'] = function(test) {
     test.ok(!transition.filter({}));
     test.done();
 };
 
-exports['filter tests: missing form does not match'] = function(test) {
+exports['filter missing form does not match'] = function(test) {
     test.ok(!transition.filter({
         patient_id: 'x',
     }));
     test.done();
 };
 
-exports['filter tests: missing clinic phone does not match'] = function(test) {
+exports['filter missing clinic phone does not match'] = function(test) {
     sinon.stub(utils, 'getClinicPhone').returns(null);
     test.ok(!transition.filter({
         form: 'x',
@@ -51,7 +53,19 @@ exports['filter tests: missing clinic phone does not match'] = function(test) {
     test.done();
 };
 
-exports['filter tests: match'] = function(test) {
+exports['filter already run does not match'] = function(test) {
+    sinon.stub(utils, 'getClinicPhone').returns('+555');
+    test.ok(!transition.filter({
+        form: 'x',
+        patient_id: 'x',
+        transitions: {
+            update_notifications: { last_rev: 9, seq: 1854, ok: true }
+        }
+    }));
+    test.done();
+};
+
+exports['filter match'] = function(test) {
     sinon.stub(utils, 'getClinicPhone').returns('+555');
     test.ok(transition.filter({
         form: 'x',
@@ -176,15 +190,35 @@ exports['add error when event type message not found'] = function(test) {
     test.done();
 };
 
+exports['no configured on or off message returns false'] = function(test) {
+    sinon.stub(transition, 'getConfig').returns({ off_form: 'off' });
+    transition.onMatch({
+        doc: {
+            form: 'off',
+            patient_id: 'x'
+        }
+    }, {}, {}, function(err, complete) {
+        test.equals(err, null);
+        test.equals(complete, false);
+        test.done();
+    });
+};
+
 exports['registration not found adds error and response'] = function(test) {
     var doc = {
         form: 'on',
         patient_id: 'x',
-        related_entities: {clinic: {contact: {phone: 'x'}}}
+        contact: { phone: 'x' }
     };
 
     sinon.stub(transition, 'getConfig').returns({
         messages: [{
+            event_type: 'on_unmute',
+            message: [{
+                content: 'Thank you {{contact.name}}',
+                locale: 'en'
+            }]
+        }, {
             event_type: 'patient_not_found',
             message: [{
                 content: 'not found {{patient_id}}',
@@ -215,7 +249,7 @@ exports['validation failure adds error and response'] = function(test) {
     var doc = {
         form: 'on',
         patient_id: 'x',
-        related_entities: {clinic: {contact: {phone: 'x'}}}
+        contact: { phone: 'x' }
     };
 
     sinon.stub(transition, 'getConfig').returns({
@@ -223,15 +257,22 @@ exports['validation failure adds error and response'] = function(test) {
             join_responses: false,
             list: [
                 {
-                    property: "patient_id",
-                    rule: "regex('^[0-9]{5}$')",
+                    property: 'patient_id',
+                    rule: 'regex("^[0-9]{5}$")',
                     message: [{
-                        content: "patient id needs 5 numbers.",
-                        locale: "en"
+                        content: 'patient id needs 5 numbers.',
+                        locale: 'en'
                     }]
                 }
             ]
         },
+        messages: [{
+            event_type: 'on_unmute',
+            message: [{
+                content: 'Thank you {{contact.name}}',
+                locale: 'en'
+            }]
+        }],
         on_form: 'on'
     });
 
@@ -259,18 +300,16 @@ exports['mute responds correctly'] = function(test) {
     var doc = {
         form: 'off',
         patient_id: '123',
-        related_entities: {
-            clinic: {
-                contact: {
-                    phone: '+1234',
-                    name: 'woot'
-                }
-            }
+        contact: {
+            phone: '+1234',
+            name: 'woot'
         }
     };
 
     var regDoc = {
-        patient_name: 'Agatha',
+        fields: {
+            patient_name: 'Agatha'
+        },
         scheduled_tasks: [{
             state: 'scheduled'
         }]
@@ -280,7 +319,7 @@ exports['mute responds correctly'] = function(test) {
         messages: [{
             event_type: 'on_mute',
             message: [{
-                content: 'Thank you {{contact.name}}, no further notifications regarding {{patient_name}} will be sent until you submit START {{patient_id}}.',
+                content: 'Thank you {{contact.name}}, no further notifications regarding {{fields.patient_name}} will be sent until you submit START {{patient_id}}.',
                 locale: 'en'
             }]
         }],
