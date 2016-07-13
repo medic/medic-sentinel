@@ -4,10 +4,11 @@ var messages = require('../../lib/messages'),
 exports['extractDetails supports template variables on doc'] = function(test) {
     var doc = {
         form: 'x',
-        reported_date: "2050-03-13T13:06:22.002Z",
-        governor: "arnold",
-        related_entities: {
-            clinic: {
+        reported_date: '2050-03-13T13:06:22.002Z',
+        governor: 'arnold',
+        contact: {
+            phone: '123',
+            parent: {
                 contact: {
                     phone: '123'
                 }
@@ -18,15 +19,16 @@ exports['extractDetails supports template variables on doc'] = function(test) {
     test.equals(details.contact.phone, '123');
     test.equals(details.governor, 'arnold');
     test.done();
-}
+};
 
 exports['extractDetails internal fields always override form fields'] = function(test) {
     var doc = {
         form: 'x',
-        reported_date: "2050-03-13T13:06:22.002Z",
-        chw_name: "Arnold",
-        related_entities: {
-            clinic: {
+        reported_date: '2050-03-13T13:06:22.002Z',
+        chw_name: 'Arnold',
+        contact: {
+            name: 'Sally',
+            parent: {
                 contact: {
                     name: 'Sally'
                 }
@@ -37,54 +39,52 @@ exports['extractDetails internal fields always override form fields'] = function
     test.equals(details.chw_name, 'Arnold');
     test.equals(details.contact.name, 'Sally');
     test.done();
-}
+};
 
 exports['scheduleMessage supports template variables on doc'] = function(test) {
     var doc = {
         form: 'x',
-        reported_date: "2050-03-13T13:06:22.002Z",
-        governor: "arnold"
+        reported_date: '2050-03-13T13:06:22.002Z',
+        governor: 'arnold'
     };
     var msg = {
-        message: "Governor {{governor}} wants to speak to you.",
+        message: 'Governor {{governor}} wants to speak to you.',
         due: moment().toISOString()
     };
-    messages.scheduleMessage(doc, msg, "+13125551212");
+    messages.scheduleMessage(doc, msg, '+13125551212');
     test.equals(doc.scheduled_tasks.length, 1);
     test.equals(
         doc.scheduled_tasks[0].messages[0].message,
-        "Governor arnold wants to speak to you."
+        'Governor arnold wants to speak to you.'
     );
     test.done();
-}
+};
 
 exports['addMessage supports template variables on doc'] = function(test) {
     var doc = {
         form: 'x',
-        reported_date: "2050-03-13T13:06:22.002Z",
-        governor: "Schwarzenegger"
-    };
-    var msg = {
-        due: moment().toISOString()
+        reported_date: '2050-03-13T13:06:22.002Z',
+        governor: 'Schwarzenegger'
     };
     messages.addMessage({
         doc: doc,
-        phone: "+13125551212",
-        message: "Governor {{governor}} wants to speak to you."
+        phone: '+13125551212',
+        message: 'Governor {{governor}} wants to speak to you.'
     });
     test.equals(doc.tasks.length, 1);
     test.equals(
         doc.tasks[0].messages[0].message,
-        "Governor Schwarzenegger wants to speak to you."
+        'Governor Schwarzenegger wants to speak to you.'
     );
     test.done();
-}
+};
 
 exports['addMessage template supports contact obj'] = function(test) {
     var doc = {
         form: 'x',
-        related_entities: {
-            clinic: {
+        contact: {
+            name: 'Paul',
+            parent: {
                 contact: {
                     name: 'Paul'
                 }
@@ -93,22 +93,23 @@ exports['addMessage template supports contact obj'] = function(test) {
     };
     messages.addMessage({
         doc: doc,
-        phone: "+13125551212",
-        message: "Thank you {{contact.name}}."
+        phone: '+13125551212',
+        message: 'Thank you {{contact.name}}.'
     });
     test.equals(doc.tasks.length, 1);
     test.equals(
         doc.tasks[0].messages[0].message,
-        "Thank you Paul."
+        'Thank you Paul.'
     );
     test.done();
-}
+};
 
 exports['addMessage supports clinic dot template variables'] = function(test) {
     var doc = {
         form: 'x',
-        related_entities: {
-            clinic: {
+        contact: {
+            name: 'Sally',
+            parent: {
                 contact: {
                     name: 'Sally'
                 }
@@ -117,25 +118,26 @@ exports['addMessage supports clinic dot template variables'] = function(test) {
     };
     messages.addMessage({
         doc: doc,
-        phone: "+13125551212",
-        message: "Thank you {{clinic.contact.name}}."
+        phone: '+13125551212',
+        message: 'Thank you {{contact.name}}.'
     });
     test.equals(doc.tasks.length, 1);
     test.equals(
         doc.tasks[0].messages[0].message,
-        "Thank you Sally."
+        'Thank you Sally.'
     );
     test.done();
-}
+};
 
 exports['addMessage template supports health_center object'] = function(test) {
     var doc = {
         form: 'x',
-        related_entities: {
-            clinic: {
+        contact: {
+            parent: {
                 parent: {
+                    type: 'health_center',
                     contact: {
-                        name: "Jeremy"
+                        name: 'Jeremy'
                     }
                 }
             }
@@ -143,26 +145,27 @@ exports['addMessage template supports health_center object'] = function(test) {
     };
     messages.addMessage({
         doc: doc,
-        phone: "+13125551212",
-        message: "Thank you {{health_center.contact.name}}."
+        phone: '+13125551212',
+        message: 'Thank you {{health_center.contact.name}}.'
     });
     test.equals(doc.tasks.length, 1);
     test.equals(
         doc.tasks[0].messages[0].message,
-        "Thank you Jeremy."
+        'Thank you Jeremy.'
     );
     test.done();
-}
+};
 
 exports['addMessage template supports district object'] = function(test) {
     var doc = {
         form: 'x',
-        related_entities: {
-            clinic: {
+        contact: {
+            parent: {
                 parent: {
                     parent: {
+                        type: 'district_hospital',
                         contact: {
-                            name: "Kristen"
+                            name: 'Kristen'
                         }
                     }
                 }
@@ -171,23 +174,44 @@ exports['addMessage template supports district object'] = function(test) {
     };
     messages.addMessage({
         doc: doc,
-        phone: "+13125551212",
-        message: "Thank you {{district.contact.name}}."
+        phone: '+13125551212',
+        message: 'Thank you {{district.contact.name}}.'
     });
     test.equals(doc.tasks.length, 1);
     test.equals(
         doc.tasks[0].messages[0].message,
-        "Thank you Kristen."
+        'Thank you Kristen.'
     );
     test.done();
-}
+};
+
+exports['addMessage template supports fields'] = function(test) {
+    var doc = {
+        form: 'x',
+        fields: {
+            patient_name: 'Sally'
+        }
+    };
+    messages.addMessage({
+        doc: doc,
+        phone: '+13125551212',
+        message: 'Thank you {{patient_name}}.'
+    });
+    test.equals(doc.tasks.length, 1);
+    test.equals(
+        doc.tasks[0].messages[0].message,
+        'Thank you Sally.'
+    );
+    test.done();
+};
 
 exports['getRecipientPhone resolves `clinic` correctly'] = function(test) {
     var phone = '+13125551213';
     var doc = {
         form: 'x',
-        related_entities: {
-            clinic: {
+        contact: {
+            phone: phone,
+            parent: {
                 contact: {
                     phone: phone
                 }
@@ -197,7 +221,7 @@ exports['getRecipientPhone resolves `clinic` correctly'] = function(test) {
     var result = messages.getRecipientPhone(doc, 'clinic');
     test.equals(result, phone);
     test.done();
-}
+};
 
 exports['getRecipientPhone defaults to doc.from if no recipient'] = function(test) {
     var phone = '+13125551213';
@@ -208,7 +232,7 @@ exports['getRecipientPhone defaults to doc.from if no recipient'] = function(tes
     var result = messages.getRecipientPhone(doc);
     test.equals(result, phone);
     test.done();
-}
+};
 
 exports['getRecipientPhone defaults to doc.from if no known recipient'] = function(test) {
     var phone = '+13125551213';
@@ -219,7 +243,7 @@ exports['getRecipientPhone defaults to doc.from if no known recipient'] = functi
     var result = messages.getRecipientPhone(doc, 'greatgrandparent');
     test.equals(result, phone);
     test.done();
-}
+};
 
 exports['getRecipientPhone defaults to given default'] = function(test) {
     var phone = '+13125551213';
@@ -230,7 +254,7 @@ exports['getRecipientPhone defaults to given default'] = function(test) {
     var result = messages.getRecipientPhone(doc, 'greatgrandparent', phone);
     test.equals(result, phone);
     test.done();
-}
+};
 
 exports['getMessage returns empty string on empty config'] = function(test) {
     var config = [{
@@ -240,7 +264,7 @@ exports['getMessage returns empty string on empty config'] = function(test) {
     test.equals('', messages.getMessage(config, 'en'));
     test.equals('', messages.getMessage(config));
     test.done();
-}
+};
 
 exports['getMessage returns empty string on bad config'] = function(test) {
     var config = [{
@@ -250,7 +274,7 @@ exports['getMessage returns empty string on bad config'] = function(test) {
     test.equals('', messages.getMessage(config, 'en'));
     test.equals('', messages.getMessage(config));
     test.done();
-}
+};
 
 exports['getMessage returns first message when locale match fails'] = function(test) {
     var config = [
@@ -266,13 +290,13 @@ exports['getMessage returns first message when locale match fails'] = function(t
     test.equals('Merci', messages.getMessage(config, 'en'));
     test.equals('Merci', messages.getMessage(config));
     test.done();
-}
+};
 
 exports['getMessage returns empty string if passed empty array'] = function(test) {
     test.equals('', messages.getMessage([], 'en'));
     test.equals('', messages.getMessage([]));
     test.done();
-}
+};
 
 exports['getMessage returns locale when matched'] = function(test) {
     var config = [
@@ -288,4 +312,4 @@ exports['getMessage returns locale when matched'] = function(test) {
     test.equals('Gracias', messages.getMessage(config, 'es'));
     test.equals('Merci', messages.getMessage(config, 'fr'));
     test.done();
-}
+};

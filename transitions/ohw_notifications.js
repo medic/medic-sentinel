@@ -1,11 +1,6 @@
-if (global.GENTLY) {
-    require = GENTLY.hijack(require);
-}
-
 var async = require('async'),
     template = require('../lib/template'),
     utils = require('../lib/utils'),
-    logger = require('../lib/logger'),
     i18n = require('../i18n'),
     clinicContactName,
     registration,
@@ -17,14 +12,14 @@ var addResponses = function() {
     var doc = new_doc,
         mute = !/^On$/i.test(String(doc.notifications));
 
-    var msg = "Thank you, {{contact_name}}. Record for {{serial_number}}"
-        + " has been deactivated per your report. No further notifications"
-        + " regarding this patient will be sent.";
+    var msg = 'Thank you, {{contact_name}}. Record for {{serial_number}}' +
+        ' has been deactivated per your report. No further notifications' +
+        ' regarding this patient will be sent.';
 
     if (!mute) {
-        msg = "Thank you, {{contact_name}}. Record for {{serial_number}}"
-            + " has been reactivated. Notifications regarding this"
-            + " patient will resume.";
+        msg = 'Thank you, {{contact_name}}. Record for {{serial_number}}' +
+            ' has been reactivated. Notifications regarding this' +
+            ' patient will resume.';
     }
 
     utils.addMessage(doc, {
@@ -34,7 +29,7 @@ var addResponses = function() {
             contact_name: clinicContactName
         })
     });
-}
+};
 
 var updateSchedule = function() {
     var doc = new_doc,
@@ -54,7 +49,7 @@ var updateSchedule = function() {
 
 
 var checkRegistration = function(callback) {
-    var msg = "No patient with id '{{patient_id}}' found.";
+    var msg = 'No patient with id \'{{patient_id}}\' found.';
     var doc = new_doc;
     utils.getOHWRegistration(doc.patient_id, function(err, data) {
         if (err || !data) {
@@ -76,7 +71,9 @@ var validate = function(callback) {
         validations = [checkRegistration];
 
     async.series(validations, function(err) {
-        if (!err) return callback();
+        if (!err) {
+            return callback();
+        }
         utils.addMessage(doc, {
             phone: clinicPhone,
             message: i18n(err, {
@@ -89,10 +86,9 @@ var validate = function(callback) {
 };
 
 var handleMatch = function(change, db, audit, callback) {
-    new_doc = change.doc,
+    new_doc = change.doc;
     clinicPhone = utils.getClinicPhone(new_doc);
     clinicContactName = utils.getClinicContactName(new_doc);
-    parentPhone = utils.getParentPhone(new_doc);
 
     validate(function(err) {
         // validation failed, finalize transition

@@ -1,6 +1,35 @@
 var _ = require('underscore'),
     logger = require('../lib/logger');
 
+var associateContact = function(audit, doc, contact, callback) {
+    var self = module.exports;
+
+    if (!contact) {
+        return callback();
+    }
+
+    // reporting phone stayed the same and contact data is up to date
+    if (doc.from === contact.phone &&
+        doc.contact &&
+        contact._id === doc.contact._id &&
+        contact._rev === doc.contact._rev) {
+        return callback();
+    }
+
+    if (contact.phone !== doc.from) {
+        contact.phone = doc.from;
+        audit.saveDoc(contact, function(err) {
+            if (err) {
+                console.log('Error updating contact: ' + JSON.stringify(err, null, 2));
+                return callback(err);
+            }
+            self.setContact(doc, contact, callback);
+        });
+    } else {
+        self.setContact(doc, contact, callback);
+    }
+};
+
 /**
  * Update clinic data on new data records, use refid for clinic lookup otherwise
  * phone number.
@@ -11,75 +40,63 @@ var _ = require('underscore'),
  */
 module.exports = {
     filter: function(doc) {
+        var self = module.exports;
         return Boolean(
             doc &&
-            doc.related_entities &&
-            !doc.related_entities.clinic
+            !doc.contact &&
+            !self._hasRun(doc)
+        );
+    },
+    _hasRun: function(doc) {
+        return Boolean(
+            doc &&
+            doc.transitions &&
+            doc.transitions.update_clinics
         );
     },
     onMatch: function(change, db, audit, callback) {
         logger.debug('calling onMatch in transition' + __filename);
-        var self = module.exports,
-            doc = change.doc,
-            q = {
-                include_docs: true,
-                limit: 1
-            },
-            view;
+        var doc = change.doc,
+            q = { include_docs: true, limit: 1 };
 
         if (doc.refid) { // use reference id to find clinic if defined
             q.key = [ String(doc.refid) ];
-            view = 'clinic_by_refid';
+            db.medic.view('kujua-sentinel', 'clinic_by_refid', q, function(err, data) {
+                if (err) {
+                    return callback(err);
+                }
+                var row = _.first(data.rows);
+                var clinic = row && row.doc;
+                if (clinic.contact && clinic.contact._id) {
+                    db.medic.get(clinic.contact._id, function(err, contact) {
+                        if (err) {
+                            return callback(err);
+                        }
+                        associateContact(audit, doc, contact, callback);
+                    });
+                } else {
+                    associateContact(audit, doc, clinic.contact || { parent: clinic }, callback);
+                }
+            });
         } else if (doc.from) {
             q.key = [ String(doc.from) ];
-            view = 'clinic_by_phone';
+            db.medic.view('kujua-sentinel', 'person_by_phone', q, function(err, data) {
+                var first = _.first(data.rows);
+                if (!first) {
+                    return callback();
+                }
+                associateContact(audit, doc, first.doc, callback);
+            });
         } else {
-            return callback(null, false);
+            return callback();
         }
-
-        db.view('kujua-sentinel', view, q, function(err, data) {
-            var clinic,
-                existing,
-                row;
-
-            if (err) {
-                return callback(err);
-            }
-
-            row = _.first(data.rows);
-            clinic = row && row.doc;
-            existing = doc.related_entities.clinic || {};
-
-            if (!clinic) {
-                return callback(null, false);
-            }
-
-            // reporting phone stayed the same and clinic data is up to date
-            if (doc.from === clinic.contact.phone && clinic._id === existing._id && clinic._rev === existing._rev) {
-                return callback(null, false);
-            }
-
-            if (clinic.contact.phone !== doc.from) {
-                clinic.contact.phone = doc.from;
-                db.saveDoc(clinic, function(err, ok) {
-                    if (err) {
-                        console.log("Error updating clinic: " + JSON.stringify(err, null, 2));
-                        return callback(err);
-                    }
-                    self.setClinic(doc, clinic, callback);
-                });
-            } else {
-                self.setClinic(doc, clinic, callback);
-            }
-        });
     },
-    setClinic: function(doc, clinic, callback) {
-        doc.related_entities.clinic = clinic;
-
+    setContact: function(doc, contact, callback) {
+        doc.contact = contact;
         // remove facility not found errors
         doc.errors = _.reject(doc.errors, function(error) {
             return error.code === 'sys.facility_not_found';
         });
         callback(null, true);
     }
-}
+};

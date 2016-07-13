@@ -1,5 +1,6 @@
 var _ = require('underscore'),
     moment = require('moment'),
+    phoneUtil = require('google-libphonenumber').PhoneNumberUtil.getInstance(),
     config = require('../config'),
     utils = require('../lib/utils'),
     logger = require('../lib/logger'),
@@ -9,26 +10,49 @@ module.exports = {
     filter: function(doc) {
         var self = module.exports;
         return Boolean(
-            doc
-            && doc.from
-            && doc.type === 'data_record'
-            && !doc.kujua_message
-            && self._isReportedAfterStartDate(doc)
+            doc &&
+            doc.from &&
+            doc.type === 'data_record' &&
+            !doc.kujua_message &&
+            self._isReportedAfterStartDate(doc) &&
+            !self._hasRun(doc) &&
+            !self._isMessageFromGateway(doc)
         );
+    },
+    _hasRun: function(doc) {
+        return Boolean(
+            doc &&
+            doc.transitions &&
+            doc.transitions.default_responses
+        );
+    },
+    /*
+     * Avoid infinite loops of auto-reply messages between gateway and itself.
+     */
+    _isMessageFromGateway: function(doc) {
+        var self = module.exports,
+            gw = self._getConfig('gateway_number'),
+            from = doc.sms_message && doc.sms_message.from;
+        if (typeof gw === 'string' && typeof from === 'string') {
+            return phoneUtil.isNumberMatch(gw, from) >= 3;
+        }
+        return false;
     },
     _isReportedAfterStartDate: function(doc) {
         var self = module.exports,
             config = self._getConfig('default_responses'),
-            start_date = moment(config.start_date, 'YYYY-MM-DD');
+            start_date;
 
         function isEmpty() {
             return !Boolean(
-                config.start_date
-                && config.start_date.trim()
+                config &&
+                config.start_date &&
+                config.start_date.trim()
             );
         }
 
         if (!isEmpty()) {
+            start_date = moment(config.start_date, 'YYYY-MM-DD');
             if (start_date.isValid() && doc.reported_date) {
                 return moment(doc.reported_date).isAfter(start_date);
             } else {
@@ -52,7 +76,7 @@ module.exports = {
         return Boolean(typeof doc.form !== 'string');
     },
     _isConfigFormsOnlyMode: function() {
-        module.exports._getConfig('forms_only_mode');
+        return module.exports._getConfig('forms_only_mode');
     },
     _getConfig: function(key) {
         return config.get(key);
@@ -64,8 +88,7 @@ module.exports = {
         return utils.translate(key, locale);
     },
     _addMessage: function(doc, msg) {
-        var self = module.exports,
-            opts = {
+        var opts = {
                 doc: doc,
                 phone: doc.from,
                 message: msg

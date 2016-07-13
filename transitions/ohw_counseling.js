@@ -1,14 +1,6 @@
-if (global.GENTLY) {
-    require = GENTLY.hijack(require);
-}
-
 var async = require('async'),
-    moment = require('moment'),
-    config = require('../config'),
     i18n = require('../i18n'),
-    date = require('../date'),
     utils = require('../lib/utils'),
-    logger = require('../lib/logger'),
     template = require('../lib/template');
 
 var clinicContactName,
@@ -17,7 +9,7 @@ var clinicContactName,
     new_doc;
 
 var checkRegistration = function(callback) {
-    var msg = "No patient with id '{{patient_id}}' found.";
+    var msg = 'No patient with id \'{{patient_id}}\' found.';
     var doc = new_doc;
     utils.getOHWRegistration(doc.patient_id, function(err, data) {
         if (err || !data) {
@@ -35,30 +27,33 @@ var checkRegistration = function(callback) {
 
 var checkDups = function(callback) {
 
-    var msg = "The ANC report you sent appears to be a duplicate. A health"
-        + " facility staff will call you soon to confirm the validity of the"
-        + " forms.";
+    var msg = 'The ANC report you sent appears to be a duplicate. A health' +
+        ' facility staff will call you soon to confirm the validity of the' +
+        ' forms.';
 
-    if (new_doc.anc_pnc === 'PNC')
+    if (new_doc.anc_pnc === 'PNC') {
         msg = msg.replace(/ANC/g, 'PNC');
+    }
 
     var dups = function(row) {
         var keys = [
-           "anc_pnc",
-           "deworming_tablet",
-           "iron_tablet",
-           "tetanus_toxoid",
-           "misoprostol_counseling",
-           "misoprostol_given",
-           "days_since_birth",
-           "vitamins",
-           "weight"
-       ];
-       for (var i in keys) {
-           var k = keys[i];
-           if (row.doc[k] !== new_doc[k]) return false;
-       };
-       return true;
+           'anc_pnc',
+           'deworming_tablet',
+           'iron_tablet',
+           'tetanus_toxoid',
+           'misoprostol_counseling',
+           'misoprostol_given',
+           'days_since_birth',
+           'vitamins',
+           'weight'
+        ];
+        for (var i in keys) {
+            var k = keys[i];
+            if (row.doc[k] !== new_doc[k]) {
+                return false;
+            }
+        }
+        return true;
     };
     var opts = {
         doc: new_doc,
@@ -68,7 +63,9 @@ var checkDups = function(callback) {
         filter: dups
     };
     utils.checkOHWDuplicates(opts, function(err) {
-        if (err) return callback(msg);
+        if (err) {
+            return callback(msg);
+        }
         return callback();
     });
 };
@@ -79,7 +76,9 @@ var validate = function(callback) {
         validations = [checkRegistration, checkDups];
 
     async.series(validations, function(err) {
-        if (!err) return callback();
+        if (!err) {
+            return callback();
+        }
         utils.addMessage(doc, {
             phone: clinicPhone,
             message: i18n(err, {
@@ -116,8 +115,8 @@ var handleMatch = function(change, db, audit, callback) {
 };
 
 var processANC = function() {
-    var msg = "Thank you, {{contact_name}}. ANC Visit for {{serial_number}}"
-        + " has been recorded.";
+    var msg = 'Thank you, {{contact_name}}. ANC Visit for {{serial_number}}' +
+        ' has been recorded.';
     utils.obsoleteScheduledMessages(
         registration, 'anc_visit', new_doc.reported_date
     );
@@ -132,17 +131,16 @@ var processANC = function() {
 
 var processPNC = function() {
 
-    var msg = 'Thank you, {{contact_name}}! PNC Visit has been'
-        + ' recorded for {{serial_number}}.';
+    var msg = 'Thank you, {{contact_name}}! PNC Visit has been' +
+        ' recorded for {{serial_number}}.';
 
     if (new_doc.weight === 'Yellow' || new_doc.weight === 'Red') {
-        msg = "Thank you, {{contact_name}}! PNC Visit has been"
-            + " recorded for {{serial_number}}. The baby is of low"
-            + " birth weight. Please refer to health facility"
-            + " immediately.";
+        msg = 'Thank you, {{contact_name}}! PNC Visit has been' +
+            ' recorded for {{serial_number}}. The baby is of low' +
+            ' birth weight. Please refer to health facility immediately.';
     }
 
-    var changed = utils.obsoleteScheduledMessages(
+    utils.obsoleteScheduledMessages(
         registration, 'counseling_reminder', new_doc.reported_date
     );
 
@@ -157,9 +155,9 @@ var processPNC = function() {
 
 var processOther = function() {
 
-    var msg = 'Thank you, {{contact_name}}. Counseling visit for'
-        + ' {{serial_number}} has been recorded. Please complete necessary'
-        + ' protocol.';
+    var msg = 'Thank you, {{contact_name}}. Counseling visit for' +
+        ' {{serial_number}} has been recorded. Please complete necessary' +
+        ' protocol.';
 
     utils.addMessage(new_doc, {
         phone: clinicPhone,

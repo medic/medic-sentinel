@@ -5,54 +5,51 @@ var _ = require('underscore'),
     utils = require('../../lib/utils');
 
 exports.tearDown = function(callback) {
-    if (transition.getAcceptedReports.restore)
+    if (transition.getAcceptedReports.restore) {
         transition.getAcceptedReports.restore();
-
-    if (transition.silenceReminders.restore)
+    }
+    if (transition.silenceReminders.restore) {
         transition.silenceReminders.restore();
-
-    if (transition.matchRegistrations.restore)
+    }
+    if (transition.matchRegistrations.restore) {
         transition.matchRegistrations.restore();
-
-    if (utils.getRegistrations.restore)
+    }
+    if (utils.getRegistrations.restore) {
         utils.getRegistrations.restore();
-
+    }
     callback();
-}
+};
 
-exports['signature'] = function(test) {
+exports['function signature'] = function(test) {
     test.ok(_.isFunction(transition.onMatch));
     test.equals(transition.onMatch.length, 4);
 
     test.ok(_.isFunction(transition.filter));
     test.equals(transition.filter.length, 1);
     test.done();
-}
+};
 
 exports['filter validation'] = function(test) {
     test.equals(transition.filter({}), false);
     test.equals(transition.filter({
-        form: 'x',
-        related_entities: {
-            clinic: {}
-        }
+        form: 'x'
     }), false);
     test.done();
-}
+};
 
-exports['onMatch returns false if form not included'] = function(test) {
+exports['onMatch callback empty if form not included'] = function(test) {
     sinon.stub(transition, 'getAcceptedReports').returns([ { form: 'x' }, { form: 'z' } ]);
 
     transition.onMatch({
         doc: {
             form: 'y'
         }
-    }, {}, {}, function(err, complete) {
-        test.equals(err, null);
-        test.equals(complete, false);
+    }, {}, {}, function(err, changed) {
+        test.equals(err, undefined);
+        test.equals(changed, undefined);
         test.done();
     });
-}
+};
 
 exports['onMatch with matching form calls getRegistrations and then matchRegistrations'] = function(test) {
 
@@ -81,16 +78,8 @@ exports['onMatch with matching form calls getRegistrations and then matchRegistr
 exports['matchRegistrations with no registrations adds error msg and response'] = function(test) {
 
     var doc = {
-        patient_id: 'x',
-        from: '+123',
-        related_entities: {
-            clinic: {
-                contact: {
-                    phone: '+1234',
-                    name: 'woot'
-                }
-            }
-        }
+        fields: { patient_id: 'x' },
+        from: '+123'
     };
 
     transition.matchRegistrations({
@@ -106,7 +95,7 @@ exports['matchRegistrations with no registrations adds error msg and response'] 
                 recipient: 'reporting_unit'
             }]
         }
-    }, function(err, complete) {
+    }, function() {
         test.ok(doc.errors);
         test.equals(doc.errors[0].message, 'not found x');
         test.ok(doc.tasks);
@@ -116,15 +105,15 @@ exports['matchRegistrations with no registrations adds error msg and response'] 
         );
         test.done();
     });
-}
+};
 
 exports['matchRegistrations with registrations adds reply'] = function(test) {
-    var doc;
-
-    doc = {
-        patient_id: '559',
-        related_entities: {
-            clinic: {
+    var doc = {
+        fields: { patient_id: '559' },
+        contact: {
+            phone: '+1234',
+            name: 'woot',
+            parent: {
                 contact: {
                     phone: '+1234',
                     name: 'woot'
@@ -135,7 +124,7 @@ exports['matchRegistrations with registrations adds reply'] = function(test) {
 
     transition.matchRegistrations({
         registrations: [{
-            doc: { patient_name: 'Archibald' }
+            doc: { fields: { patient_name: 'Archibald' } }
         }],
         doc: doc,
         report: {
@@ -148,7 +137,7 @@ exports['matchRegistrations with registrations adds reply'] = function(test) {
                 recipient: 'reporting_unit'
             }]
         }
-    }, function(err, complete) {
+    }, function() {
         test.ok(doc.tasks);
         test.equals(
             _.first(_.first(doc.tasks).messages).message,
@@ -156,7 +145,7 @@ exports['matchRegistrations with registrations adds reply'] = function(test) {
         );
         test.done();
     });
-}
+};
 
 
 exports['adding silence_type to matchRegistrations calls silenceReminders'] = function(test) {

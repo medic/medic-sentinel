@@ -1,9 +1,11 @@
 var fs = require('fs'),
     _ = require('underscore'),
     async = require('async'),
-    date = require('../date'),
-    moment = require('moment'),
+    moment = require('moment');
+
+var date = require('../date'),
     config = require('../config'),
+    logger = require('../lib/logger'),
     tasks;
 
 tasks = _.compact(_.map(fs.readdirSync(__dirname), function(file) {
@@ -12,7 +14,7 @@ tasks = _.compact(_.map(fs.readdirSync(__dirname), function(file) {
             return require('./' + file);
         }
     } catch(e) {
-        console.error(e); // carry on ...
+        logger.error(e); // carry on ...
     }
 }));
 
@@ -34,7 +36,8 @@ exports.sendable = function(_config, _now) {
 
 exports.checkSchedule = function() {
     var db = require('../db'),
-        audit = require('couchdb-audit').withNode(db, db.user),
+        audit = require('couchdb-audit')
+            .withNano(db, db.settings.db, db.settings.auditDb, db.settings.ddoc, db.settings.username),
         now = moment(date.getDate());
 
     async.forEachSeries(tasks, function(task, callback) {
@@ -50,7 +53,7 @@ exports.checkSchedule = function() {
         }
     }, function(err) {
         if (err) {
-            console.error('Error running tasks: ' + JSON.stringify(err));
+            logger.error('Error running tasks: ' + JSON.stringify(err));
         }
         _reschedule();
     });
@@ -58,10 +61,10 @@ exports.checkSchedule = function() {
 
 function _reschedule() {
     var now = moment(),
-        heartbeat = now.clone().startOf('minute').add('minutes', 5),
+        heartbeat = now.clone().startOf('minute').add(5, 'minutes'),
         duration = moment.duration(heartbeat.valueOf() - now.valueOf());
 
-    console.log('checking schedule again in', moment.duration(duration).humanize());
+    logger.info('checking schedule again in', moment.duration(duration).humanize());
     setTimeout(exports.checkSchedule, duration.asMilliseconds());
 }
 

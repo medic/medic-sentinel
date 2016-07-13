@@ -7,14 +7,16 @@ var _ = require('underscore'),
 
 var restore = function(objs) {
     _.each(objs, function(obj) {
-        if (obj.restore) obj.restore();
+        if (obj.restore) {
+            obj.restore();
+        }
     });
-}
+};
 
 exports.setUp = function(callback) {
     sinon.stub(transition, '_isReportedAfterStartDate').returns(true);
     callback();
-}
+};
 
 exports.tearDown = function(callback) {
     restore([
@@ -28,12 +30,13 @@ exports.tearDown = function(callback) {
         transition._translate,
         transition._addMessage,
         config.get,
+        config.getTranslations,
         messages.addMessage,
         utils.isOutgoingAllowed,
         utils._isMessageFromGateway
     ]);
     callback();
-}
+};
 
 exports['onMatch signature'] = function(test) {
     test.ok(_.isFunction(transition.onMatch));
@@ -105,9 +108,8 @@ exports['filter passes when response is allowed'] = function(test) {
     test.done();
 };
 
-exports['filter passes when response is not allowed'] = function(test) {
-    // Filter passes because message is added with a 'denied' state.
-    sinon.stub(utils, 'isOutgoingAllowed').returns(false);
+exports['pass filter when message is not from gateway'] = function(test) {
+    sinon.stub(transition, '_getConfig').returns('+774455558889');
     test.equals(transition.filter({
         from: 'x',
         type: 'data_record'
@@ -180,12 +182,9 @@ exports['isReportedAfterStartDate returns false when reported date is before sta
 exports['add response if unstructured message and setting enabled'] = function(test) {
 
     sinon.stub(transition, '_isConfigFormsOnlyMode').returns(false);
-    sinon.stub(config, 'get').withArgs('translations').returns([
-        {
-            'key': 'sms_received',
-            'default': 'SMS rcvd, thx!'
-        }
-    ]);
+    sinon.stub(config, 'getTranslations').returns({
+        en: { sms_received: 'SMS rcvd, thx!' }
+    });
 
     var messageFn = sinon.spy(messages, 'addMessage');
 
@@ -210,12 +209,9 @@ exports['add response if unstructured message and setting enabled'] = function(t
 };
 
 exports['add response if unstructured message (form prop is undefined)'] = function(test) {
-    sinon.stub(config, 'get').withArgs('translations').returns([
-        {
-            'key': 'sms_received',
-            'default': 'SMS rcvd, thx!'
-        }
-    ]);
+    sinon.stub(config, 'getTranslations').returns({
+        en: { sms_received: 'SMS rcvd, thx!' }
+    });
     var messageFn = sinon.spy(messages, 'addMessage');
     test.expect(4);
     var doc = {
@@ -243,13 +239,9 @@ exports['do not add response if valid form'] = function(test) {
      * skip response handling here because validation and responses are handled
      * on different transition.
      */
-
-    sinon.stub(config, 'get').withArgs('translations').returns([
-        {
-            'key': 'sms_received',
-            'default': 'SMS rcvd, thx!'
-        }
-    ]);
+    sinon.stub(config, 'getTranslations').returns({
+        en: { sms_received: 'SMS rcvd, thx!' }
+    });
     var messageFn = sinon.spy(messages, 'addMessage');
     test.expect(3);
     var doc = {
@@ -269,12 +261,9 @@ exports['do not add response if valid form'] = function(test) {
 exports['add response if form not found'] = function(test) {
     sinon.stub(transition, '_isConfigFormsOnlyMode').returns(false);
     // stub the translations config
-    sinon.stub(config, 'get').withArgs('translations').returns([
-        {
-            'key': 'sms_received',
-            'default': 'SMS rcvd, thx!'
-        }
-    ]);
+    sinon.stub(config, 'getTranslations').returns({
+        en: { sms_received: 'SMS rcvd, thx!' }
+    });
     var messageFn = sinon.spy(messages, 'addMessage');
     test.expect(4);
     var doc = {
@@ -300,14 +289,10 @@ exports['add response if form not found'] = function(test) {
 };
 
 exports['add response if form not found and forms_only_mode'] = function(test) {
-    sinon.stub(transition, '_isConfigFormsOnlyMode').returns(true);
-    // stub the translations config
-    sinon.stub(config, 'get').withArgs('translations').returns([
-        {
-            'key': 'form_not_found',
-            'default': 'Form was not recognized.'
-        }
-    ]);
+    sinon.stub(config, 'get').withArgs('forms_only_mode').returns(true);
+    sinon.stub(transition, '_translate').withArgs('form_not_found').returns(
+        'Form was not recognized.'
+    );
     var messageFn = sinon.spy(messages, 'addMessage');
     test.expect(4);
     var doc = {
@@ -336,23 +321,11 @@ exports['add response if form not found and respect locale'] = function(test) {
     sinon.stub(transition, '_isConfigFormsOnlyMode').returns(false);
     sinon.stub(transition, '_getLocale').returns('fr');
     // stub the translations config
-    sinon.stub(config, 'get').withArgs('translations').returns([
-        {
-            key: 'sms_received',
-            default: 'SMS message rcvd',
-            translations: [
-                {
-                    locale: 'fr',
-                    content: 'Merci, votre message a été bien reçu.'
-                },
-                {
-                    locale: 'es',
-                    content: 'Recibimos tu mensaje.'
-
-                }
-            ]
-        }
-    ]);
+    sinon.stub(config, 'getTranslations').returns({
+        en: { sms_received: 'SMS message rcvd' },
+        fr: { sms_received: 'Merci, votre message a été bien reçu.' },
+        es: { sms_received: 'Recibimos tu mensaje.' }
+    });
     var messageFn = sinon.spy(messages, 'addMessage');
     test.expect(4);
 
@@ -382,14 +355,10 @@ exports['add response if form not found and respect locale'] = function(test) {
 };
 
 exports['add response to empty message'] = function (test) {
-    sinon.stub(transition, '_isConfigFormsOnlyMode').returns(false);
-    // stub the translations config
-    sinon.stub(config, 'get').withArgs('translations').returns([
-        {
-            'key': 'empty',
-            'default': 'SMS appears empty.'
-        }
-    ]);
+    sinon.stub(config, 'get').withArgs('forms_only_mode').returns(true);
+    sinon.stub(config, 'getTranslations').returns({
+        en: { empty: 'SMS appears empty.' }
+    });
     var messageFn = sinon.spy(messages, 'addMessage');
     test.expect(4);
     var doc = {
@@ -416,12 +385,9 @@ exports['add response to empty message'] = function (test) {
 
 exports['add response when recipient is allowed'] = function (test) {
     sinon.stub(utils, 'isOutgoingAllowed').returns(true);
-    sinon.stub(config, 'get').withArgs('translations').returns([
-        {
-            'key': 'sms_received',
-            'default': 'ahoy mate'
-        }
-    ]);
+    sinon.stub(config, 'getTranslations').returns({
+        en: { sms_received: 'ahoy mate' }
+    });
     var messageFn = sinon.spy(messages, 'addMessage');
     test.expect(4);
     var doc = {
@@ -443,12 +409,9 @@ exports['add response when recipient is allowed'] = function (test) {
 
 exports['add response with denied state when recipient is denied'] = function (test) {
     sinon.stub(utils, 'isOutgoingAllowed').returns(false);
-    sinon.stub(config, 'get').withArgs('translations').returns([
-        {
-            'key': 'sms_received',
-            'default': 'ahoy mate'
-        }
-    ]);
+    sinon.stub(config, 'getTranslations').returns({
+        en: { sms_received: 'ahoy mate' }
+    });
     var messageFn = sinon.spy(messages, 'addMessage');
     test.expect(4);
     var doc = {

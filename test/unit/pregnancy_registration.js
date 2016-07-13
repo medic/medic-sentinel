@@ -2,20 +2,12 @@ var _ = require('underscore'),
     transition = require('../../transitions/registration'),
     sinon = require('sinon'),
     moment = require('moment'),
-    utils = require('../../lib/utils'),
-    related_entities,
-    config;
-
-related_entities = {
-    clinic: {
-        contact: {
-            phone: '+1234'
-        }
-    }
-};
+    utils = require('../../lib/utils');
 
 function getMessage(doc) {
-    if (!doc || !doc.tasks) return;
+    if (!doc || !doc.tasks) {
+        return;
+    }
     return _.first(_.first(doc.tasks).messages).message;
 }
 
@@ -25,16 +17,16 @@ exports.setUp = function(callback) {
         type: 'pregnancy',
         events: [
            {
-               "name": "on_create",
-               "trigger": "add_patient_id",
-               "params": "",
-               "bool_expr": ""
+               name: 'on_create',
+               trigger: 'add_patient_id',
+               params: '',
+               bool_expr: ''
            },
            {
-               "name": "on_create",
-               "trigger": "add_expected_date",
-               "params": "",
-               "bool_expr": "typeof doc.getid === 'undefined'"
+               name: 'on_create',
+               trigger: 'add_expected_date',
+               params: '',
+               bool_expr: 'typeof doc.getid === "undefined"'
            }
         ],
         validations: {
@@ -63,16 +55,16 @@ exports.setUp = function(callback) {
         type: 'pregnancy',
         events: [
            {
-               "name": "on_create",
-               "trigger": "add_patient_id",
-               "params": "",
-               "bool_expr": ""
+               name: 'on_create',
+               trigger: 'add_patient_id',
+               params: '',
+               bool_expr: ''
            },
            {
-               "name": "on_create",
-               "trigger": "add_expected_date",
-               "params": "",
-               "bool_expr": "typeof doc.getid === 'undefined'"
+               name: 'on_create',
+               trigger: 'add_expected_date',
+               params: '',
+               bool_expr: 'typeof doc.getid === "undefined"'
            }
         ],
         validations: {
@@ -107,7 +99,9 @@ exports.tearDown = function(callback) {
         transition.getConfig,
         utils.getForm
     ], function(o) {
-        if (o.restore) o.restore();
+        if (o.restore) {
+            o.restore();
+        }
     });
     callback();
 };
@@ -157,6 +151,7 @@ exports['filter succeeds with no clinic phone if public form'] = function(test) 
 exports['filter succeeds with populated doc'] = function(test) {
     var doc = { form: 'y' };
     sinon.stub(utils, 'getClinicPhone').returns('somephone');
+    sinon.stub(utils, 'getForm').returns({});
     test.ok(transition.filter(doc));
     test.done();
 };
@@ -173,23 +168,19 @@ exports['is id only'] = function(test) {
         getid: 'x'
     }), true);
     test.done();
-}
+};
 
 exports['setExpectedBirthDate sets lmp_date and expected_date to null when lmp 0'] = function(test) {
-    var doc = {lmp: 0};
+    var doc = { fields: { lmp: 0 } };
     transition.setExpectedBirthDate(doc);
     test.equals(doc.lmp_date, null);
     test.equals(doc.expected_date, null);
     test.done();
-}
+};
 
 exports['setExpectedBirthDate sets lmp_date and expected_date correctly for lmp: 10'] = function(test) {
-    var doc,
+    var doc = { fields: { lmp: '10' } },
         start = moment().startOf('week');
-
-    doc = {
-        lmp: '10'
-    };
 
     transition.setExpectedBirthDate(doc);
 
@@ -198,7 +189,7 @@ exports['setExpectedBirthDate sets lmp_date and expected_date correctly for lmp:
     test.equals(doc.expected_date, start.clone().add(30, 'weeks').toISOString());
 
     test.done();
-}
+};
 
 exports['valid adds lmp_date and patient_id'] = function(test) {
     test.expect(5);
@@ -209,21 +200,23 @@ exports['valid adds lmp_date and patient_id'] = function(test) {
 
     doc = {
         form: 'y',
-        patient_name: 'abc',
-        lmp: 5
+        fields: {
+            patient_name: 'abc',
+            lmp: 5
+        }
     };
 
     transition.onMatch({
         doc: doc
-    }, {}, {}, function(err, complete) {
+    }, {}, {}, function(err, changed) {
         test.equals(err, null);
-        test.equals(complete, true);
+        test.equals(changed, true);
         test.equals(doc.lmp_date, start.toISOString());
         test.ok(doc.patient_id);
         test.equals(doc.tasks, undefined);
         test.done();
     });
-}
+};
 
 exports['zero lmp value only registers patient'] = function(test) {
 
@@ -233,21 +226,23 @@ exports['zero lmp value only registers patient'] = function(test) {
 
     var doc = {
         form: 'y',
-        patient_name: 'abc',
-        lmp: 0
+        fields: {
+            patient_name: 'abc',
+            lmp: 0
+        }
     };
 
     transition.onMatch({
         doc: doc
-    }, {}, {}, function(err, complete) {
+    }, {}, {}, function(err, changed) {
         test.equals(err, null);
-        test.equals(complete, true);
+        test.equals(changed, true);
         test.equals(doc.lmp_date, null);
         test.ok(doc.patient_id);
         test.equals(doc.tasks, undefined);
         test.done();
     });
-}
+};
 
 exports['id only logic with valid name'] = function(test) {
     var doc;
@@ -256,22 +251,24 @@ exports['id only logic with valid name'] = function(test) {
 
     doc = {
         form: 'y',
-        patient_name: 'abc',
-        lmp: 5,
+        fields: {
+            patient_name: 'abc',
+            lmp: 5
+        },
         getid: 'x'
     };
 
     transition.onMatch({
         doc: doc
-    }, {}, {}, function(err, complete) {
+    }, {}, {}, function(err, changed) {
         test.equals(err, null);
-        test.equals(complete, true);
+        test.equals(changed, true);
         test.equals(doc.lmp_date, undefined);
         test.ok(doc.patient_id);
 
         test.done();
     });
-}
+};
 
 exports['id only logic with invalid name'] = function(test) {
     test.expect(5);
@@ -282,22 +279,24 @@ exports['id only logic with invalid name'] = function(test) {
     doc = {
         form: 'y',
         from: '+12345',
-        patient_name: '',
-        lmp: 5,
+        fields: {
+            patient_name: '',
+            lmp: 5
+        },
         getid: 'x'
     };
 
     transition.onMatch({
         doc: doc
-    }, {}, {}, function(err, complete) {
+    }, {}, {}, function(err, changed) {
         test.equals(err, null);
-        test.equals(complete, true);
+        test.equals(changed, true);
         test.equals(doc.patient_id, undefined);
         test.ok(doc.tasks);
         test.equals(getMessage(doc), 'Invalid patient name.');
         test.done();
     });
-}
+};
 
 exports['invalid name valid LMP logic'] = function(test) {
     test.expect(4);
@@ -307,28 +306,23 @@ exports['invalid name valid LMP logic'] = function(test) {
     doc = {
         form: 'y',
         from: '+1234',
-        related_entities: {
-            clinic: {
-                contact: {
-                    phone: '+1234'
-                }
-            }
-        },
-        patient_name: '',
-        lmp: 5
+        fields: {
+            patient_name: '',
+            lmp: 5
+        }
     };
 
     transition.onMatch({
         doc: doc
-    }, {}, {}, function(err, complete) {
+    }, {}, {}, function(err, changed) {
         test.equals(err, null);
-        test.equals(complete, true);
+        test.equals(changed, true);
         test.equals(doc.patient_id, undefined);
         test.equals(getMessage(doc), 'Invalid patient name.');
 
         test.done();
     });
-}
+};
 
 exports['valid name invalid LMP logic'] = function(test) {
     var doc;
@@ -336,21 +330,23 @@ exports['valid name invalid LMP logic'] = function(test) {
     doc = {
         form: 'y',
         from: '+1234',
-        patient_name: 'hi',
-        lmp: 45
+        fields: {
+            patient_name: 'hi',
+            lmp: 45
+        }
     };
 
     transition.onMatch({
         doc: doc
-    }, {}, {}, function(err, complete) {
+    }, {}, {}, function(err, changed) {
         test.equals(err, null);
-        test.equals(complete, true);
+        test.equals(changed, true);
         test.equals(doc.patient_id, undefined);
         test.equals(getMessage(doc), 'Invalid LMP; must be between 0-40 weeks.');
 
         test.done();
     });
-}
+};
 
 exports['invalid name invalid LMP logic'] = function(test) {
     var doc;
@@ -358,49 +354,49 @@ exports['invalid name invalid LMP logic'] = function(test) {
     doc = {
         form: 'y',
         from: '+123',
-        patient_name: '',
-        lmp: 45
+        fields: {
+            patient_name: '',
+            lmp: 45
+        }
     };
 
     transition.onMatch({
         doc: doc
-    }, {}, {}, function(err, complete) {
+    }, {}, {}, function(err, changed) {
         test.equals(err, null);
-        test.equals(complete, true);
+        test.equals(changed, true);
         test.equals(doc.patient_id, undefined);
         test.equals(getMessage(doc), 'Invalid patient name.  Invalid LMP; must be between 0-40 weeks.');
 
         test.done();
     });
-}
+};
 
 exports['mismatched form returns false'] = function(test) {
     transition.onMatch({
         doc: {
             form: 'x'
         }
-    }, {}, {}, function(err, complete) {
-        test.equals(complete, false);
-
+    }, {}, {}, function(err, changed) {
+        test.equals(changed, undefined);
         test.done();
-    })
-}
+    });
+};
 
 exports['missing all fields returns validation errors'] = function(test) {
     test.expect(2);
     var doc = {
         form: 'y',
-        from: '+123',
-        related_entities: related_entities
+        from: '+123'
     };
     transition.onMatch({
         doc: doc
-    }, {}, {}, function(err, complete) {
-        test.equals(complete, true);
+    }, {}, {}, function(err, changed) {
+        test.equals(changed, true);
         test.equals(
             getMessage(doc),
             'Invalid LMP; must be between 0-40 weeks.  Invalid patient name.'
         );
         test.done();
     });
-}
+};

@@ -9,14 +9,14 @@ if (arg === 'debug') {
     logger.transports.console.level = arg;
 }
 
-function completeSetup(err, design) {
+function completeSetup(err) {
     if (err) {
         console.error(JSON.stringify(err));
         process.exit(1);
     } else {
-        config.load(function(err) {
+        config.init(function(err) {
             if (err) {
-                console.error('error loading config', err);
+                logger.error('Error loading config: ', err);
                 process.exit(1);
             }
             logger.info('loaded config.');
@@ -25,25 +25,27 @@ function completeSetup(err, design) {
                 logger.debug('loglevel is %s.', logger.transports.console.level);
             }
             logger.info('attaching transitions...');
-            require('./transitions').attach(design);
+            require('./transitions').attach();
             require('./schedule').checkSchedule();
-            config.listen();
             logger.info('startup complete.');
         });
     }
 }
 
-db.getDoc('_design/kujua-sentinel', function(err, doc) {
+db.request({ db: 'medic', doc: '_design/kujua-sentinel' }, function(err, doc) {
     var base = require('./designs/base.json'),
         matches;
 
     if (err) {
         if (err.error === 'not_found') {
-            db.saveDesign('kujua-sentinel', base, function(err, ok) {
+            db.medic.insert(base, '_design/kujua-sentinel', function(err) {
                 completeSetup(err, base);
             });
         } else {
-            logger.error("Failed to create design document: " + err);
+            logger.error(
+                'failed to create design document: %s',
+                JSON.stringify(err)
+            );
         }
     } else {
         logger.debug('found sentinel design doc.');
@@ -54,7 +56,7 @@ db.getDoc('_design/kujua-sentinel', function(err, doc) {
             completeSetup(null, doc);
         } else {
             _.extend(doc, base);
-            db.saveDoc(doc, function(err, ok) {
+            db.medic.insert(doc, function(err) {
                 completeSetup(err, doc);
             });
         }

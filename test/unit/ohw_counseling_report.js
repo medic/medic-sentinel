@@ -1,11 +1,10 @@
 var _ = require('underscore'),
-    gently = global.GENTLY = new (require('gently')),
     moment = require('moment'),
+    sinon = require('sinon'),
     transition = require('../../transitions/ohw_counseling'),
     fakedb = require('../fake-db'),
     fakeaudit = require('../fake-audit'),
     utils = require('../../lib/utils'),
-    date = require('../../date'),
     registration;
 
 exports.setUp = function(callback) {
@@ -13,101 +12,107 @@ exports.setUp = function(callback) {
 
     process.env.TEST_ENV = true;
 
-    gently.hijacked['../lib/utils'].checkOHWDuplicates = fakedb.checkOHWDuplicates;
-    gently.hijacked['../lib/utils'].getOHWRegistration = function(id, callback) {
-        fakedb.getOHWRegistration(id, function(err, reg) {
-            registration = {
-                patient_id: "123",
-                serial_number: "FOO",
-                scheduled_tasks: [
-                    {
-                        messages: [ { message: 'x' } ],
-                        type: 'anc_visit',
-                        state: 'scheduled',
-                        group: 1,
-                        due: now.clone().add('days', 3).valueOf()
-                    },
-                    {
-                        messages: [ { message: 'x' } ],
-                        type: 'anc_visit',
-                        state: 'scheduled',
-                        group: 1,
-                        due: now.clone().add('days', 7).valueOf()
-                    },
-                    {
-                        messages: [ { message: 'x' } ],
-                        type: 'anc_visit',
-                        state: 'scheduled',
-                        group: 2,
-                        due: now.clone().add('days', 15).valueOf()
-                    },
-                    {
-                        messages: [ { message: 'x' } ],
-                        type: 'anc_visit',
-                        state: 'scheduled',
-                        group: 3,
-                        due: now.clone().add('days', 17).valueOf()
-                    },
-                    {
-                        messages: [ { message: 'x' } ],
-                        type: 'anc_visit',
-                        state: 'scheduled',
-                        group: 3,
-                        due: now.clone().add('days', 25).valueOf()
-                    },
-                    {
-                        messages: [ { message: 'x' } ],
-                        type: 'anc_visit',
-                        state: 'scheduled',
-                        group: 3,
-                        due: now.clone().add('days', 31).valueOf()
-                    },
-                    {
-                        messages: [ { message: 'x' } ],
-                        state: 'scheduled',
-                        type: 'upcoming_delivery'
-                    },
-                    {
-                        messages: [ { message: 'x' } ],
-                        state: 'scheduled',
-                        type: 'counseling_reminder',
-                        group: 1,
-                        due: now.clone().add('days', 10).valueOf()
-                    },
-                    {
-                        messages: [ { message: 'x' } ],
-                        state: 'scheduled',
-                        type: 'counseling_reminder',
-                        group: 1,
-                        due: now.clone().add('days', 12).valueOf()
-                    },
-                    {
-                        messages: [ { message: 'x' } ],
-                        state: 'scheduled',
-                        type: 'counseling_reminder',
-                        group: 2,
-                        due: now.clone().add('days', 14).valueOf()
-                    },
-                    {
-                        messages: [ { message: 'x' } ],
-                        state: 'scheduled',
-                        type: 'counseling_reminder',
-                        group: 2,
-                        due: now.clone().add('days', 25).valueOf()
-                    },
-                    {
-                        messages: [ { message: 'x' } ],
-                        state: 'scheduled',
-                        type: 'counseling_reminder',
-                        group: 3,
-                        due: now.clone().add('days', 34).valueOf()
-                    }
-                ]
-            };
-            callback(null, registration);
-        });
+    registration = {
+        patient_id: '123',
+        serial_number: 'FOO',
+        scheduled_tasks: [
+            {
+                messages: [ { message: 'x' } ],
+                type: 'anc_visit',
+                state: 'scheduled',
+                group: 1,
+                due: now.clone().add(3, 'days').valueOf()
+            },
+            {
+                messages: [ { message: 'x' } ],
+                type: 'anc_visit',
+                state: 'scheduled',
+                group: 1,
+                due: now.clone().add(7, 'days').valueOf()
+            },
+            {
+                messages: [ { message: 'x' } ],
+                type: 'anc_visit',
+                state: 'scheduled',
+                group: 2,
+                due: now.clone().add(15, 'days').valueOf()
+            },
+            {
+                messages: [ { message: 'x' } ],
+                type: 'anc_visit',
+                state: 'scheduled',
+                group: 3,
+                due: now.clone().add(17, 'days').valueOf()
+            },
+            {
+                messages: [ { message: 'x' } ],
+                type: 'anc_visit',
+                state: 'scheduled',
+                group: 3,
+                due: now.clone().add(25, 'days').valueOf()
+            },
+            {
+                messages: [ { message: 'x' } ],
+                type: 'anc_visit',
+                state: 'scheduled',
+                group: 3,
+                due: now.clone().add(31, 'days').valueOf()
+            },
+            {
+                messages: [ { message: 'x' } ],
+                state: 'scheduled',
+                type: 'upcoming_delivery'
+            },
+            {
+                messages: [ { message: 'x' } ],
+                state: 'scheduled',
+                type: 'counseling_reminder',
+                group: 1,
+                due: now.clone().add(10, 'days').valueOf()
+            },
+            {
+                messages: [ { message: 'x' } ],
+                state: 'scheduled',
+                type: 'counseling_reminder',
+                group: 1,
+                due: now.clone().add(12, 'days').valueOf()
+            },
+            {
+                messages: [ { message: 'x' } ],
+                state: 'scheduled',
+                type: 'counseling_reminder',
+                group: 2,
+                due: now.clone().add(14, 'days').valueOf()
+            },
+            {
+                messages: [ { message: 'x' } ],
+                state: 'scheduled',
+                type: 'counseling_reminder',
+                group: 2,
+                due: now.clone().add(25, 'days').valueOf()
+            },
+            {
+                messages: [ { message: 'x' } ],
+                state: 'scheduled',
+                type: 'counseling_reminder',
+                group: 3,
+                due: now.clone().add(34, 'days').valueOf()
+            }
+        ]
     };
+    sinon.stub(utils, 'checkOHWDuplicates').callsArgWith(1, null, []);
+    sinon.stub(utils, 'getOHWRegistration').callsArgWith(1, null, registration);
 
+    callback();
+};
+
+exports.tearDown = function(callback) {
+    if (utils.checkOHWDuplicates.restore) {
+        utils.checkOHWDuplicates.restore();
+    }
+    if (utils.getOHWRegistration.restore) {
+        utils.getOHWRegistration.restore();
+    }
     callback();
 };
 
@@ -116,8 +121,10 @@ exports['ANC acknowledgement'] = function(test) {
     var doc = {
         patient_id: '123',
         anc_pnc: 'ANC',
-        related_entities: {
-            clinic: {
+        contact: {
+            phone: '123',
+            name: 'qqq',
+            parent: {
                 contact: {
                     phone: '123',
                     name: 'qqq'
@@ -127,7 +134,7 @@ exports['ANC acknowledgement'] = function(test) {
     };
     transition.onMatch({
         doc: doc
-    }, fakedb, fakeaudit, function(err, complete) {
+    }, fakedb, fakeaudit, function() {
         test.ok(doc.tasks);
         test.equals(doc.tasks.length, 1);
         test.same(
@@ -146,7 +153,7 @@ exports['ANC report right now clears group 1'] = function(test) {
     };
     transition.onMatch({
         doc: doc
-    }, fakedb, fakeaudit, function(err, complete) {
+    }, fakedb, fakeaudit, function() {
         var st = registration.scheduled_tasks;
         test.ok(st);
         test.equals(st.length, 12);
@@ -169,13 +176,14 @@ exports['ANC report right now clears group 1'] = function(test) {
     };
     transition.onMatch({
         doc: doc
-    }, fakedb, fakeaudit, function(err, complete) {
+    }, fakedb, fakeaudit, function() {
         var st = registration.scheduled_tasks;
         test.ok(st);
         test.equals(st.length, 12);
         test.ok(_.all(registration.scheduled_tasks, function(task) {
-            if (task.type === 'anc_visit' && task.group === 1)
+            if (task.type === 'anc_visit' && task.group === 1) {
                 return task.state === 'cleared';
+            }
             return task.state !== 'cleared';
         }));
         test.done();
@@ -185,19 +193,20 @@ exports['ANC report right now clears group 1'] = function(test) {
 exports['ANC report in 14 days clears group 1 and 2'] = function(test) {
     test.expect(3);
     var doc = {
-        reported_date: moment(new Date()).add('days', 14).valueOf(),
+        reported_date: moment(new Date()).add(14, 'days').valueOf(),
         patient_id: '123',
         anc_pnc: 'ANC'
     };
     transition.onMatch({
         doc: doc
-    }, fakedb, fakeaudit, function(err, complete) {
+    }, fakedb, fakeaudit, function() {
         var st = registration.scheduled_tasks;
         test.ok(st);
         test.equals(st.length, 12);
         test.ok(_.all(registration.scheduled_tasks, function(task) {
-            if (task.type === 'anc_visit' && [1,2].indexOf(task.group) !== -1)
+            if (task.type === 'anc_visit' && [1,2].indexOf(task.group) !== -1) {
                 return task.state === 'cleared';
+            }
             return task.state !== 'cleared';
         }));
         test.done();
@@ -210,8 +219,9 @@ exports['PNC normal acknowledgement'] = function(test) {
         patient_id: '123',
         anc_pnc: 'PNC',
         weight: 'Green',
-        related_entities: {
-            clinic: {
+        contact: {
+            name: 'qqq',
+            parent: {
                 contact: {
                     name: 'qqq'
                 }
@@ -220,7 +230,7 @@ exports['PNC normal acknowledgement'] = function(test) {
     };
     transition.onMatch({
         doc: doc
-    }, fakedb, fakeaudit, function(err, complete) {
+    }, fakedb, fakeaudit, function() {
         test.ok(doc.tasks);
         test.equals(doc.tasks.length, 1);
         test.same(
@@ -236,18 +246,11 @@ exports['PNC report now clears group 1'] = function(test) {
     var doc = {
         reported_date: new Date().valueOf(),
         patient_id: '123',
-        anc_pnc: 'PNC',
-        related_entities: {
-            clinic: {
-                contact: {
-                    phone: 'clinic'
-                }
-            }
-        }
+        anc_pnc: 'PNC'
     };
     transition.onMatch({
         doc: doc
-    }, fakedb, fakeaudit, function(err, complete) {
+    }, fakedb, fakeaudit, function() {
         var st = registration.scheduled_tasks;
         test.equal(doc.tasks.length, 1);
         test.ok(registration);
@@ -278,20 +281,13 @@ exports['PNC report now clears group 1'] = function(test) {
 exports['PNC report in 36 days clears all counseling reminders'] = function(test) {
     test.expect(4);
     var doc = {
-        reported_date: moment(new Date()).add('days', 36).valueOf(),
+        reported_date: moment(new Date()).add(36, 'days').valueOf(),
         patient_id: '123',
-        anc_pnc: 'PNC',
-        related_entities: {
-            clinic: {
-                contact: {
-                    phone: 'clinic'
-                }
-            }
-        }
+        anc_pnc: 'PNC'
     };
     transition.onMatch({
         doc: doc
-    }, fakedb, fakeaudit, function(err, complete) {
+    }, fakedb, fakeaudit, function() {
         var st = registration.scheduled_tasks;
         test.equal(doc.tasks.length, 1);
         test.ok(registration);

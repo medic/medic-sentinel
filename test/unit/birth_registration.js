@@ -1,39 +1,23 @@
-var _ = require('underscore'),
-    transition = require('../../transitions/registration'),
+var transition = require('../../transitions/registration'),
     sinon = require('sinon'),
     moment = require('moment'),
-    utils = require('../../lib/utils'),
-    related_entities,
-    config;
-
-related_entities = {
-    clinic: {
-        contact: {
-            phone: '+1234'
-        }
-    }
-};
-
-function getMessage(doc) {
-    if (!doc || !doc.tasks) return;
-    return _.first(_.first(doc.tasks).messages).message;
-}
+    utils = require('../../lib/utils');
 
 exports.setUp = function(callback) {
     sinon.stub(transition, 'getConfig').returns([{
         form: 'BIR',
         events: [
            {
-               "name": "on_create",
-               "trigger": "add_patient_id",
-               "params": "",
-               "bool_expr": ""
+               name: 'on_create',
+               trigger: 'add_patient_id',
+               params: '',
+               bool_expr: ''
            },
            {
-               "name": "on_create",
-               "trigger": "add_birth_date",
-               "params": "",
-               "bool_expr": ""
+               name: 'on_create',
+               trigger: 'add_birth_date',
+               params: '',
+               bool_expr: ''
            }
         ],
         validations: [
@@ -59,20 +43,20 @@ exports.setUp = function(callback) {
 };
 
 exports.tearDown = function(callback) {
-    if (utils.getRegistrations.restore)
+    if (utils.getRegistrations.restore) {
         utils.getRegistrations.restore();
-
-    if (transition.getConfig.restore)
+    }
+    if (transition.getConfig.restore) {
         transition.getConfig.restore();
-
+    }
     callback();
-}
+};
 
 exports['setBirthDate sets birth_date correctly for weeks_since_birth: 0'] = function(test) {
     var doc,
         start = moment().startOf('week');
     doc = {
-        weeks_since_birth: 0
+        fields: { weeks_since_birth: 0 }
     };
     transition.setBirthDate(doc);
     test.ok(doc.birth_date);
@@ -84,7 +68,7 @@ exports['setBirthDate sets birth_date correctly for age_in_weeks 10'] = function
     var doc,
         start = moment().startOf('week');
     doc = {
-        age_in_weeks: 10
+        fields: { age_in_weeks: 10 }
     };
     transition.setBirthDate(doc);
     test.ok(doc.birth_date);
@@ -98,8 +82,10 @@ exports['valid form adds patient_id and expected_date'] = function(test) {
 
     var doc = {
         form: 'BIR',
-        patient_name: 'abc',
-        weeks_since_birth: 1
+        fields: {
+            patient_name: 'abc',
+            weeks_since_birth: 1
+        }
     };
 
     transition.onMatch({

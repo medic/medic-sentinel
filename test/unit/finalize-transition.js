@@ -1,7 +1,5 @@
 var _ = require('underscore'),
-    transitions,
-    gently = global.GENTLY = new (require('gently')),
-    utils = require('../../lib/utils');
+    transitions;
 
 exports.setUp = function(callback) {
     process.env.TEST_ENV = true;
@@ -14,145 +12,109 @@ exports['finalize exposed'] = function(test) {
     test.done();
 };
 
-exports['save not called if transition has had no effect'] = function(test) {
-    var db,
-        audit,
-        doc,
-        latest;
-
-    doc = {
+exports['save not called if transition results are null'] = function(test) {
+    test.expect(0);
+    var doc = {
         _rev: '1'
     };
-    latest = {
-        _rev: '1'
-    };
-
-    db = {
-        getDoc: function(id, callback) {
-            callback(null, latest);
-        }
-    };
-    audit = {
-        saveDoc: function(doc, callback) {
+    var audit = {
+        saveDoc: function() {
             test.fail();
         }
     };
-
     transitions.finalize({
+        change: { doc: doc },
+        audit: audit,
+        results: null
+    });
+    test.done();
+};
+
+exports['save is called if transition results have changes'] = function(test) {
+    test.expect(1);
+    var doc = {
+        _rev: '1'
+    };
+    var audit = {
+        saveDoc: function(doc) {
+            test.ok(doc._rev);
+        }
+    };
+    transitions.finalize({
+        change: { doc: doc },
+        audit: audit,
+        results: [null,null,true]
+    });
+    test.done();
+};
+
+exports['applyTransition creates transitions property'] = function(test) {
+    test.expect(7);
+    var doc = {
+        _rev: '1'
+    };
+    var audit = {
+        saveDoc: function(doc, callback) {
+            callback();
+        }
+    };
+    var transition = {
+        onMatch: function(change, db, audit, callback) {
+            change.doc.foo = 'bar';
+            callback(null, true);
+        }
+    };
+    transitions.applyTransition({
+        key: 'x',
         change: {
-            doc: doc
+            doc: doc,
+            seq: 1
         },
-        key: 'x'
-    }, db, audit, function(err) {
+        transition: transition,
+        audit: audit
+    }, function(err, changed) {
+        test.ok(!err);
+        test.ok(changed);
+        test.ok(doc.transitions.x.ok);
+        test.ok(doc.transitions.x.last_rev);
+        test.ok(doc.transitions.x.seq);
+        test.equals(doc.errors, undefined);
+        test.equals(doc.foo, 'bar');
         test.done();
     });
 };
 
-exports['records error status of transition'] = function(test) {
-    var db,
-        audit,
-        doc,
-        latest;
-
-    doc = {
+exports['applyTransition handles errors'] = function(test) {
+    test.expect(5);
+    var doc = {
         _rev: '1'
     };
-
-    db = {
-        getDoc: function(id, callback) {
-            callback(null, doc);
-        }
-    };
-    audit = {
+    var audit = {
         saveDoc: function(doc, callback) {
             callback();
         }
     };
-
-    transitions.finalize({
-        err: 'badness',
+    var transition = {
+        onMatch: function(change, db, audit, callback) {
+            callback(new Error('oops'));
+        }
+    };
+    transitions.applyTransition({
+        key: 'x',
         change: {
             doc: doc
         },
-        key: 'x'
-    }, db, audit, function(err) {
-        test.ok(doc.transitions);
-        test.equals(doc.transitions.x.ok, false);
+        transition: transition,
+        audit: audit
+    }, function(err, changed) {
+        test.equals(err.message, 'oops');
+        test.equals(changed, undefined);
+        // ok is set to false
+        test.ok(doc.transitions.x.ok === false);
+        // one error is created on doc
+        test.ok(doc.errors.length === 1);
+        // error message contains error
+        test.ok(doc.errors[0].message.match(/oops/));
         test.done();
     });
-}
-
-exports['updated _rev bypasses save'] = function(test) {
-    var db,
-        audit,
-        doc,
-        latest;
-
-    doc = {
-        changed_stuff: true,
-        _rev: '1'
-    };
-    latest = {
-        _rev: '2'
-    };
-
-    db = {
-        getDoc: function(id, callback) {
-            callback(null, latest);
-        }
-    };
-    audit = {
-        saveDoc: function(doc, callback) {
-            test.fail();
-        }
-    };
-
-
-    transitions.finalize({
-        change: {
-            doc: doc
-        },
-        key: 'x'
-    }, db, audit, function(err) {
-        test.ok(!err);
-        test.done();
-    });
-}
-
-exports['passes changed doc to saveDoc when changed'] = function(test) {
-    var db,
-        audit,
-        doc,
-        latest;
-
-    doc = {
-        changed_stuff: true,
-        _rev: '1'
-    };
-    latest = {
-        _rev: '1'
-    };
-
-    db = {
-        getDoc: function(id, callback) {
-            callback(null, latest);
-        }
-    };
-    audit = {
-        saveDoc: function(doc, callback) {
-            test.ok(doc.changed_stuff);
-            callback();
-        }
-    };
-
-    transitions.finalize({
-        change: {
-            doc: doc
-        },
-        key: 'x'
-    }, db, audit, function(err) {
-        test.ok(!err);
-        test.equals(doc.transitions.x.ok, true);
-        test.done();
-    });
-}
+};

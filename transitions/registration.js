@@ -13,20 +13,31 @@ var vm = require('vm'),
 
 module.exports = {
     filter: function(doc) {
-        var self = module.exports;
-        if (!doc || !doc.form) {
-            return false;
-        }
-        var config = self.getRegistrationConfig(self.getConfig(), doc.form);
-        if (!config) {
-            return false;
-        }
-        var form = utils.getForm(doc.form);
-        return Boolean(utils.getClinicPhone(doc) || (form && form.public_form));
+        var self = module.exports,
+            form = utils.getForm(doc && doc.form);
+        return Boolean(
+            form &&
+            self.getRegistrationConfig(self.getConfig(), doc.form) &&
+            (utils.getClinicPhone(doc) || (form && form.public_form)) &&
+            !self._hasRun(doc)
+        );
+    },
+    _hasRun: function(doc) {
+        return Boolean(
+            doc &&
+            doc.transitions &&
+            doc.transitions.registration
+        );
     },
     getWeeksSinceDOB: function(doc) {
+        if (!doc || !doc.fields) {
+            return '';
+        }
         return String(
-            doc.weeks_since_dob || doc.dob || doc.weeks_since_birth || doc.age_in_weeks
+            doc.fields.weeks_since_dob ||
+            doc.fields.dob ||
+            doc.fields.weeks_since_birth ||
+            doc.fields.age_in_weeks
         );
     },
     /*
@@ -35,11 +46,15 @@ module.exports = {
      * */
     getWeeksSinceLMP: function(doc) {
         var props = ['weeks_since_lmp', 'last_menstrual_period', 'lmp'],
-            ret;
+            ret,
+            val;
         _.each(props, function(prop) {
-            if (_.isNumber(ret) && !_.isNaN(ret)) return;
-            if (_.isNumber(Number(doc[prop]))) {
-                ret = Number(doc[prop]);
+            if (_.isNumber(ret) && !_.isNaN(ret)) {
+                return;
+            }
+            val = Number(doc.fields && doc.fields[prop]);
+            if (_.isNumber(val)) {
+                ret = val;
             }
         });
         return ret;
@@ -60,7 +75,7 @@ module.exports = {
           var sandbox = { doc: doc };
           return !vm.runInNewContext(expr, sandbox);
         } catch(e) {
-          logger.warn('Failed to eval boolean expression:');
+          logger.warn('Failed to eval boolean expression: ' + expr);
           logger.warn(e);
           return true;
         }
@@ -91,7 +106,7 @@ module.exports = {
      * Given a form code and config array, return config for that form.
      * */
     getRegistrationConfig: function(config, form_code) {
-        var regex = RegExp('^\W*' + form_code + '\\W*$','i');
+        var regex = new RegExp('^\W*' + form_code + '\\W*$','i');
         return _.find(config, function(conf) {
             return regex.test(conf.form);
         });
@@ -103,11 +118,10 @@ module.exports = {
     onMatch: function(change, db, audit, callback) {
         var self = module.exports,
             doc = change.doc,
-            config = self.getRegistrationConfig(self.getConfig(), doc.form),
-            isIdOnly = self.isIdOnly(doc);
+            config = self.getRegistrationConfig(self.getConfig(), doc.form);
 
         if (!config) {
-            return callback(null, false);
+            return callback();
         }
 
         self.validate(config, doc, function(errors) {
@@ -123,28 +137,30 @@ module.exports = {
                             msgs.push(err.message);
                         } else if (err) {
                             msgs.push(err);
-                        };
+                        }
                     });
                     messages.addReply(doc, msgs.join('  '));
                 } else {
                     var err = _.first(errors);
                     messages.addReply(doc, err.message || err);
                 }
-                // if validation errors then stop processign registration
                 return callback(null, true);
             }
 
             var series = [];
             _.each(config.events, function(event) {
                 var trigger = self.triggers[event.trigger];
-                if (!trigger) return;
+                if (!trigger) {
+                    return;
+                }
                 if (event.name === 'on_create') {
                     var args = [db, doc];
                     if (event.params) {
                         // params setting get sent as array
                         args.push(event.params.split(','));
                     }
-                    if (self.isBoolExprFalse(doc, event.bool_expr)) {
+                    var obj = _.defaults({}, doc, doc.fields);
+                    if (self.isBoolExprFalse(obj, event.bool_expr)) {
                         return;
                     }
                     series.push(function(cb) {
@@ -153,21 +169,19 @@ module.exports = {
                 }
             });
 
-            async.series(series, function(err, results) {
-                //callback(null, true);
+            async.series(series, function(err) {
                 if (err) {
-                    callback(err, false);
-                } else {
-                    // add messages is done last so data on doc can be used in
-                    // messages
-                    self.addMessages(config, doc);
-                    callback(null, true);
+                    return callback(err);
                 }
+                // add messages is done last so data on doc can be used in
+                // messages
+                self.addMessages(config, doc);
+                callback(null, true);
             });
         });
     },
     triggers: {
-        'add_patient_id': function(db, doc, cb) {
+        add_patient_id: function(db, doc, cb) {
             var args = Array.prototype.slice.call(arguments),
                 self = module.exports;
             cb = args.pop();
@@ -175,10 +189,12 @@ module.exports = {
                 return;
             }
             // if we already have a patient id then return
-            if (doc.patient_id) return;
+            if (doc.patient_id) {
+                return;
+            }
             self.setId({db: db, doc: doc}, cb);
         },
-        "add_expected_date": function(db, doc, cb) {
+        add_expected_date: function(db, doc, cb) {
             var args = Array.prototype.slice.call(arguments),
                 self = module.exports;
             cb = args.pop();
@@ -188,7 +204,7 @@ module.exports = {
             self.setExpectedBirthDate(doc);
             cb();
         },
-        "add_birth_date": function(db, doc, cb) {
+        add_birth_date: function(db, doc, cb) {
             var args = Array.prototype.slice.call(arguments),
                 self = module.exports;
             cb = args.pop();
@@ -198,9 +214,8 @@ module.exports = {
             self.setBirthDate(doc);
             cb();
         },
-        'assign_schedule': function(db, doc, cb) {
-            var self = module.exports,
-                args = Array.prototype.slice.call(arguments);
+        assign_schedule: function(db, doc, cb) {
+            var args = Array.prototype.slice.call(arguments);
             if (args.length < 4) {
                 cb('Please specify schedule name in settings.');
             }
@@ -227,7 +242,7 @@ module.exports = {
             now = moment(date.getDate()),
             extra = {next_msg: schedules.getNextTimes(doc, now)};
         if (config.messages) {
-            _.each(config.messages, function(msg, idx) {
+            _.each(config.messages, function(msg) {
                 messages.addMessage({
                     doc: doc,
                     phone: messages.getRecipientPhone(doc, msg.recipient),

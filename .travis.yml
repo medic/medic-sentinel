@@ -1,8 +1,14 @@
 language: node_js
+sudo: false
 node_js:
-   - 0.10
+  - "6.3"
+  - "5.6"
+  - "0.12"
 
-script: "npm install && TEST_ENV=1 npm test"
+before_script:
+  - npm install grunt-cli -g
+
+script: "grunt test"
 
 notifications:
   webhooks: 
