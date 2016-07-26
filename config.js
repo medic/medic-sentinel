@@ -79,6 +79,5 @@ module.exports = {
         });
         loadTranslations();
     },
-    db_info: null,
-    last_valid_seq: null
+    db_info: null
 };
