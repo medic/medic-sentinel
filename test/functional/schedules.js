@@ -4,6 +4,7 @@ var _ = require('underscore'),
     sinon = require('sinon'),
     moment = require('moment'),
     utils = require('../../lib/utils'),
+    uuid = require('uuid'),
     related_entities;
 
 related_entities = {
@@ -48,6 +49,9 @@ exports.tearDown = function(callback) {
     }
     if (schedules.getScheduleConfig.restore) {
         schedules.getScheduleConfig.restore();
+    }
+    if (uuid.v4.restore) {
+        uuid.v4.restore();
     }
     callback();
 }
@@ -94,6 +98,7 @@ exports['registration sets up schedule'] = function(test) {
             }
         ]
     });
+    sinon.stub(uuid, 'v4').returns('test-uuid');
 
     var doc = {
         reported_date: moment().toISOString(),
@@ -135,7 +140,8 @@ exports['registration sets up schedule'] = function(test) {
         if (msg1) {
             test.deepEqual(msg1, {
                 to: '+1234',
-                message: "Mustaches.  Overrated or underrated?"
+                message: 'Mustaches.  Overrated or underrated?',
+                uuid: 'test-uuid'
             });
         }
         test.done();
@@ -184,6 +190,7 @@ exports['registration sets up schedule using bool_expr'] = function(test) {
             }
         ]
     });
+    sinon.stub(uuid, 'v4').returns('test-uuid');
 
     var doc = {
         reported_date: moment().toISOString(),
@@ -226,7 +233,8 @@ exports['registration sets up schedule using bool_expr'] = function(test) {
         if (msg1) {
             test.deepEqual(msg1, {
                 to: '+1234',
-                message: "Mustaches.  Overrated or underrated?"
+                message: 'Mustaches.  Overrated or underrated?',
+                uuid: 'test-uuid'
             });
         }
         test.done();

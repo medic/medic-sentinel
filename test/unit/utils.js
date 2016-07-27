@@ -4,6 +4,7 @@ var _ = require('underscore'),
     db = require('../../db'),
     sinon = require('sinon'),
     utils = require('../../lib/utils'),
+    uuid = require('uuid'),
     config = require('../../config');
 
 var restore = function(objs) {
@@ -15,6 +16,7 @@ var restore = function(objs) {
 exports.tearDown = function(callback) {
     restore([
         config.get,
+        uuid.v4,
         db.view
     ]);
     callback();
@@ -180,12 +182,16 @@ exports['getRecentForm calls through to db view correctly'] = function(test) {
 
 exports['addScheduledMessage creates a new scheduled task'] = function(test) {
 
-    test.expect(9);
+
+    test.expect(10);
 
     var message = 'xyz';
     var due = new Date();
     var phone = '+123';
+    var testUuid = 'test-uuid';
     var doc = {};
+
+    sinon.stub(uuid, 'v4').returns(testUuid);
 
     utils.addScheduledMessage(doc, {
         message: message,
@@ -199,6 +205,7 @@ exports['addScheduledMessage creates a new scheduled task'] = function(test) {
     test.equals(task.messages.length, 1);
     test.equals(task.messages[0].to, phone);
     test.equals(task.messages[0].message, message);
+    test.equals(task.messages[0].uuid, testUuid);
     test.equals(task.state, 'scheduled');
     test.equals(task.state_history.length, 1);
     test.equals(task.state_history[0].state, 'scheduled');
