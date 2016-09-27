@@ -11,6 +11,13 @@ var vm = require('vm'),
     config = require('../config'),
     date = require('../date');
 
+var findFirstDefinedValue = function(doc, fields) {
+    var definedField = _.find(fields, function(field) {
+        return !_.isUndefined(doc[field]) && !_.isNull(doc[field]);
+    });
+    return definedField && doc[definedField];
+};
+
 module.exports = {
     filter: function(doc) {
         var self = module.exports;
@@ -24,10 +31,26 @@ module.exports = {
         var form = utils.getForm(doc.form);
         return Boolean(utils.getClinicPhone(doc) || (form && form.public_form));
     },
+    getDOB: function(doc) {
+        var today = moment(date.getDate()).startOf('day');
+        var weeks = parseInt(module.exports.getWeeksSinceDOB(doc), 10);
+        if (!_.isNaN(weeks)) {
+            return today.startOf('week').subtract(weeks, 'weeks');
+        }
+        var days = parseInt(module.exports.getDaysSinceDOB(doc), 10);
+        if (!_.isNaN(days)) {
+            return today.subtract(days, 'days');
+        }
+        // no given date of birth - return today as it's the best we can do
+        return today;
+    },
     getWeeksSinceDOB: function(doc) {
-        return String(
-            doc.weeks_since_dob || doc.dob || doc.weeks_since_birth || doc.age_in_weeks
-        );
+        var fields = [ 'weeks_since_dob', 'dob', 'weeks_since_birth', 'age_in_weeks' ];
+        return findFirstDefinedValue(doc, fields);
+    },
+    getDaysSinceDOB: function(doc) {
+        var fields = [ 'days_since_dob', 'days_since_birth', 'age_in_days' ];
+        return findFirstDefinedValue(doc, fields);
     },
     /*
      * Given a doc get the LMP value as a number, including 0.  Supports three
@@ -79,10 +102,7 @@ module.exports = {
         }
     },
     setBirthDate: function(doc) {
-        var weeks_since = module.exports.getWeeksSinceDOB(doc),
-            start = moment(date.getDate()).startOf('week');
-        start.subtract(Number(weeks_since), 'weeks');
-        doc.birth_date = start.toISOString();
+        doc.birth_date = module.exports.getDOB(doc).toISOString();
     },
     getConfig: function() {
         return _.extend({}, config.get('registrations'));

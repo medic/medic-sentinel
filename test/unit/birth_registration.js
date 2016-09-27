@@ -92,6 +92,24 @@ exports['setBirthDate sets birth_date correctly for age_in_weeks 10'] = function
     test.done();
 };
 
+exports['setBirthDate sets birth_date correctly for days_since_birth: 0'] = function(test) {
+    var doc = { days_since_birth: 0 },
+        expected = moment().startOf('day').toISOString();
+    transition.setBirthDate(doc);
+    test.ok(doc.birth_date);
+    test.equals(doc.birth_date, expected);
+    test.done();
+};
+
+exports['setBirthDate sets birth_date correctly for age_in_days: 10'] = function(test) {
+    var doc = { age_in_days: 10 },
+        expected = moment().startOf('day').subtract(10, 'days').toISOString();
+    transition.setBirthDate(doc);
+    test.ok(doc.birth_date);
+    test.equals(doc.birth_date, expected);
+    test.done();
+};
+
 exports['valid form adds patient_id and expected_date'] = function(test) {
 
     sinon.stub(utils, 'getRegistrations').callsArgWithAsync(1, null, []);
