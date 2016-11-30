@@ -1,14 +1,20 @@
 var nano = require('nano'),
 	url = require('url'),
-    path = require('path');
+    path = require('path'),
+    request = require('request');
 
 var couchUrl = process.env.COUCH_URL;
+var ftiUrl = process.env.FTI_URL;
+
 if (couchUrl) {
     // strip trailing slash from to prevent bugs in path matching
     couchUrl = couchUrl.replace(/\/$/, '');
+    var baseUrl = couchUrl.substring(0, couchUrl.indexOf('/', 10));
     var parsedUrl = url.parse(couchUrl);
 
-    module.exports = nano(couchUrl.substring(0, couchUrl.indexOf('/', 10)));
+    ftiUrl = ftiUrl || baseUrl.replace('5984', '5986');
+
+    module.exports = nano(baseUrl);
     module.exports.medic = nano(couchUrl);
 
     var dbName = parsedUrl.path.replace('/','');
@@ -28,8 +34,18 @@ if (couchUrl) {
     }
 
     module.exports.fti = function(index, data, cb) {
-        var uri = path.join('/_fti/local', module.exports.settings.db, '_design', module.exports.settings.ddoc, index);
-        module.exports.request({ path: uri, qs: data }, cb);
+        var uri = ftiUrl + '/' + path.join('/_fti/local', module.exports.settings.db,
+                                           '_design', module.exports.settings.ddoc, index);
+        request({ url: uri, qs: data }, function(err, response, result) {
+            if (!err) {
+                try {
+                    result = JSON.parse(result);
+                } catch (e) {
+                    cb(e);
+                }
+            }
+            cb(err, result);
+        });
     };
     module.exports.config = function(cb) {
         module.exports.request({ path: '/_config' }, cb);
