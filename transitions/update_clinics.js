@@ -20,7 +20,7 @@ var associateContact = function(audit, doc, contact, callback) {
         contact.phone = doc.from;
         audit.saveDoc(contact, function(err) {
             if (err) {
-                console.log('Error updating contact: ' + JSON.stringify(err, null, 2));
+                logger.error('Error updating contact: ' + JSON.stringify(err, null, 2));
                 return callback(err);
             }
             self.setContact(doc, contact, callback);
