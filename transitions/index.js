@@ -277,7 +277,7 @@ var applyTransitions = function(options, callback) {
          */
         operations.push(function(cb) {
             applyTransition(opts, function(err, changed) {
-                cb(null, err || changed);
+                cb(null, changed);
             });
         });
     });
