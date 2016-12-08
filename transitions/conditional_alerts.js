@@ -9,6 +9,15 @@ module.exports = {
     _getConfig: function() {
         return _.extend({}, config.get('alerts'));
     },
+    _hasRun: function(doc) {
+        // Avoid running forever. Also ignores the error state
+        // (doc.transitions.conditional_alerts.ok) of the previous run.
+        return Boolean(
+            doc &&
+            doc.transitions &&
+            doc.transitions.conditional_alerts
+        );
+    },
     _runCondition: function(condition, context, callback) {
         try {
             callback(null, vm.runInNewContext(condition, context));
@@ -40,10 +49,12 @@ module.exports = {
         }
     },
     filter: function(doc) {
+        var self = module.exports;
         return Boolean(
             doc &&
             doc.form &&
-            doc.type === 'data_record'
+            doc.type === 'data_record' &&
+            !self._hasRun(doc)
         );
     },
     onMatch: function(change, db, audit, cb) {

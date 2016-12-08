@@ -220,40 +220,33 @@ var applyTransition = function(options, callback) {
 
     /*
      * Transitions are async and should return true if the document has
-     * changed.  If a transition errors then log the error, but don't
-     * return it because that will stop the series and the other
-     * transitions won't run.
+     * changed.  If a transition errors then log the error, but don't return it
+     * because that will stop the series and the other transitions won't run.
      */
     transition.onMatch(change, db, audit, function(err, changed) {
         logger.debug(
-            'finished transition for doc %s seq %s transition %s',
-            change.id, change.seq, key
+            'finished transition %s for seq %s doc %s is %s',
+            key, change.seq, change.id, changed ? 'changed' : 'unchanged'
         );
-        // todo?
-        // prop = doc.transitions && doc.transitions[key] ? doc.transitions[key] : {};
-        //_setProperty('tries', prop.tries ? prop.tries++ : 1)
-        //_setProperty('couch', 'uuid');
-        //
         if (err || changed) {
             _setProperty('last_rev', parseInt(change.doc._rev) + 1);
             _setProperty('seq', change.seq);
             _setProperty('ok', !err);
         }
         if (err) {
-            var message = 'Transition error on ' + key;
-            if (err.message) {
-                message += ': ' + err.message;
-            }
+            // adds an error to the doc but it will only get saved if there are
+            // other changes too.
             utils.addError(change.doc, {
                 code: key + '_error',
-                message: message
+                message: 'Transition error on ' + key + ': ' +
+                    err.message ? err.message: JSON.stringify(err)
             });
             logger.error(
-                'transition %s returned error doc %s seq %s: %s',
+                'transition %s errored on doc %s seq %s: %s',
                 key, change.id, change.seq, JSON.stringify(err)
             );
         }
-        callback(err, changed);
+        callback(null, changed);
     });
 };
 
@@ -276,15 +269,8 @@ var applyTransitions = function(options, callback) {
             );
             return;
         }
-        /*
-         * Transition error short circuits async.series, so we never
-         * return errors on the callback but if there are errors we
-         * save them.
-         */
         operations.push(function(cb) {
-            applyTransition(opts, function(err, changed) {
-                cb(null, err || changed);
-            });
+            applyTransition(opts, cb);
         });
     });
 

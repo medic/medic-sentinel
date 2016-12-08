@@ -64,7 +64,7 @@ exports['transitions are only executed again if first run failed'] = function(te
       form: 'V',
       recipient: 'reporting_unit',
       message: 'alert!',
-      condition: 'doc.fields.last_menstrual_period = 15'
+      condition: 'doc.fields.last_menstrual_period == 15'
     }
   });
   var saveDoc = sinon.stub();
