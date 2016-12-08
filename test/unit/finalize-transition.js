@@ -109,7 +109,7 @@ exports['applyTransition adds errors to doc but does not return errors'] = funct
     }, function(err, changed) {
         test.ok(!err);
         test.ok(!changed);
-        test.ok(doc.transitions.x.ok === false);
+        test.ok(_.isUndefined(doc.transitions)); // don't save the transition or it won't run next time
         test.ok(doc.errors.length === 1);
         // error message contains error
         test.ok(doc.errors[0].message.match(/oops/));

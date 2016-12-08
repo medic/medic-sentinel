@@ -228,7 +228,7 @@ var applyTransition = function(options, callback) {
             'finished transition %s for seq %s doc %s is %s',
             key, change.seq, change.id, changed ? 'changed' : 'unchanged'
         );
-        if (err || changed) {
+        if (changed) {
             _setProperty('last_rev', parseInt(change.doc._rev) + 1);
             _setProperty('seq', change.seq);
             _setProperty('ok', !err);
