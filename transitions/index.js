@@ -118,6 +118,12 @@ var canRun = function(options) {
         if (doc.transitions && doc.transitions[key]) {
             return parseInt(doc._rev) === parseInt(doc.transitions[key].last_rev);
         }
+        logger.debug(
+            'isRevSame tested true on transition %s for seq %s doc %s',
+            key,
+            change.seq,
+            change.id
+        );
         return false;
     };
 
@@ -263,7 +269,7 @@ var applyTransitions = function(options, callback) {
         };
         if (!canRun(opts)) {
             logger.debug(
-                'not running transition %s for seq %s doc %s',
+                'canRun test failed on transition %s for seq %s doc %s',
                 key,
                 options.change.seq,
                 options.change.id
@@ -277,7 +283,7 @@ var applyTransitions = function(options, callback) {
          */
         operations.push(function(cb) {
             applyTransition(opts, function(err, changed) {
-                cb(null, changed);
+                cb(null, err || changed);
             });
         });
     });

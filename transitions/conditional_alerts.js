@@ -9,20 +9,11 @@ module.exports = {
     _getConfig: function() {
         return _.extend({}, config.get('alerts'));
     },
-    _hasConfig: function(doc) {
-        var self = module.exports;
-        // confirm the form is defined on a reminder config
-        return _.find(self._getConfig(), function(obj) {
-            return obj.form &&
-                doc.form.match(new RegExp('^\\s*'+obj.form+'\\s*$','i'));
-        });
-    },
     _runCondition: function(condition, context, callback) {
         try {
             callback(null, vm.runInNewContext(condition, context));
         } catch(e) {
-            var lines = e.message.split('\n');
-            callback(lines[lines.length - 1]);
+            callback(e.message);
         }
     },
     _evaluateCondition: function(doc, alert, callback) {
@@ -48,21 +39,11 @@ module.exports = {
             });
         }
     },
-    _hasRun: function(doc) {
-        return Boolean(
-            doc &&
-            doc.transitions &&
-            doc.transitions.conditional_alerts
-        );
-    },
     filter: function(doc) {
-        var self = module.exports;
         return Boolean(
             doc &&
             doc.form &&
-            doc.type === 'data_record' &&
-            self._hasConfig(doc) &&
-            !self._hasRun(doc)
+            doc.type === 'data_record'
         );
     },
     onMatch: function(change, db, audit, cb) {
