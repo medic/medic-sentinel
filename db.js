@@ -31,35 +31,44 @@ if (process.env.COUCH_URL) {
     process.exit(1);
 }
 
-var client = couchdb.createClient(
-    settings.port,
-    settings.host,
-    settings.username,
-    settings.password
-);
-var db = client.db(settings.db);
+var makeDb = function(couchdb) {
+    var client = couchdb.createClient(
+        settings.port,
+        settings.host,
+        settings.username,
+        settings.password
+    );
+    var db = client.db(settings.db);
 
-// Fix for 0.4 : https://github.com/medic/medic-projects/issues/1178#issuecomment-273550990
-var nativeViewFunc = db.view;
-db.view = function(design, view, query, cb) {
-    return nativeViewFunc.call(db, design, view, query, function(err, data) {
-        if (!err && !data) {
-            return cb(new Error('Both err and data are undefined'));
-        }
-        return cb(err, data);
-    });
+    // Fix for 0.4 : https://github.com/medic/medic-projects/issues/1178#issuecomment-273550990
+    // Wrap the felix view calls to deal with the unexpected case where both err and result
+    // are undefined. This can happen when felix can't connect to couchdb, for instance.
+    // 2.x has moved off of felix (to nano), so this is an ugly patch for 0.4 only.
+    var nativeViewFunc = db.view;
+    db.view = function(design, view, query, cb) {
+        return nativeViewFunc.call(db, design, view, query, function(err, data) {
+            if (!err && !data) {
+                return cb(new Error('Both err and data are undefined'));
+            }
+            return cb(err, data);
+        });
+    };
+    var nativeGetDocFunc = db.getDoc;
+    db.getDoc = function(id, doc, cb) {
+        return nativeGetDocFunc.call(db, id, doc, function(err, doc) {
+            if (!err && !doc) {
+                return cb(new Error('Both err and doc are undefined'));
+            }
+            return cb(err, doc);
+        });
+    };
+
+    return db;
 };
-var nativeGetDocFunc = db.getDoc;
-db.getDoc = function(id, doc, cb) {
-    return nativeGetDocFunc.call(db, id, doc, function(err, doc) {
-        if (!err && !doc) {
-            return cb(new Error('Both err and doc are undefined'));
-        }
-        return cb(err, doc);
-    });
-};
+var db = makeDb(couchdb);
 
 module.exports = db;
+module.exports.makeDbForTesting = makeDb;
 module.exports.user = settings.username;
 module.exports.fti = function(index, data, cb) {
     var path = '/_fti/local' + settings.db
