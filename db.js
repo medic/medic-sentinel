@@ -24,20 +24,24 @@ if (process.env.COUCH_URL) {
 	}
 } else if (!process.env.TEST_ENV) {
     logger.error(
-        "Please define a COUCH_URL in your environment e.g. \n" +
-        "export COUCH_URL='http://admin:123qwe@localhost:5984/medic'\n" +
-        "If you are running tests use TEST_ENV=1 in your environment.\n"
+        'Please define a COUCH_URL in your environment e.g. \n' +
+        'export COUCH_URL=\'http://admin:123qwe@localhost:5984/medic\'\n' +
+        'If you are running tests use TEST_ENV=1 in your environment.\n'
     );
     process.exit(1);
 }
 
-var makeDb = function(couchdb) {
-    var client = couchdb.createClient(
+var makeClient = function(couchdb) {
+    return couchdb.createClient(
         settings.port,
         settings.host,
         settings.username,
         settings.password
     );
+
+};
+
+var makeDb = function(client) {
     var db = client.db(settings.db);
 
     // Fix for 0.4 : https://github.com/medic/medic-projects/issues/1178#issuecomment-273550990
@@ -65,14 +69,15 @@ var makeDb = function(couchdb) {
 
     return db;
 };
-var db = makeDb(couchdb);
+var client = makeClient(couchdb);
+var db = makeDb(client);
 
 module.exports = db;
-module.exports.makeDbForTesting = makeDb;
+module.exports.makeDbForTesting = _.compose(makeDb, makeClient);
 module.exports.user = settings.username;
 module.exports.fti = function(index, data, cb) {
-    var path = '/_fti/local' + settings.db
-        + '/_design' + settings.db + '/' + index;
+    var path = '/_fti/local' + settings.db +
+        '/_design' + settings.db + '/' + index;
     logger.debug('fti path: ', path);
     logger.debug('fti query: ', data);
     client.request({
