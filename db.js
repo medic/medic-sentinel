@@ -52,7 +52,11 @@ var makeDb = function(client) {
     db.view = function(design, view, query, cb) {
         return nativeViewFunc.call(db, design, view, query, function(err, data) {
             if (!err && !data) {
-                return cb(new Error('Both err and data are undefined'));
+                var errMessage = 'Both err and data are undefined in view call.\n' +
+                    'design : ' + design + '\n' +
+                    'view : ' + view + '\n' +
+                    'query : ' + JSON.stringify(query, null, 2) + '\n';
+                return cb(new Error(errMessage));
             }
             return cb(err, data);
         });
@@ -61,7 +65,11 @@ var makeDb = function(client) {
     db.getDoc = function(id, doc, cb) {
         return nativeGetDocFunc.call(db, id, doc, function(err, doc) {
             if (!err && !doc) {
-                return cb(new Error('Both err and doc are undefined'));
+                var errMessage = 'Both err and data are undefined in getDoc call.\n' +
+                    'db : ' + JSON.stringify(db, null, 2) + '\n' +
+                    'id : ' + id + '\n' +
+                    'doc : ' + JSON.stringify(doc, null, 2) + '\n';
+                return cb(new Error(errMessage));
             }
             return cb(err, doc);
         });
