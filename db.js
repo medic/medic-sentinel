@@ -50,6 +50,10 @@ var makeDb = function(client) {
     // 2.x has moved off of felix (to nano), so this is an ugly patch for 0.4 only.
     var nativeViewFunc = db.view;
     db.view = function(design, view, query, cb) {
+        if (typeof(query) === 'function' && !cb) {
+            cb = query;
+            query = undefined;
+        }
         return nativeViewFunc.call(db, design, view, query, function(err, data) {
             if (!err && !data) {
                 var errMessage = 'Both err and data are undefined in view call.\n' +
@@ -61,14 +65,28 @@ var makeDb = function(client) {
             return cb(err, data);
         });
     };
+
     var nativeGetDocFunc = db.getDoc;
-    db.getDoc = function(id, doc, cb) {
-        return nativeGetDocFunc.call(db, id, doc, function(err, doc) {
+    db.getDoc = function(id, rev, attachments, cb) {
+        if (!cb && !attachments && typeof rev === 'function') {
+            cb = rev;
+            rev = undefined;
+        } else if (!cb && typeof attachments === 'function') {
+            cb = attachments;
+            if (typeof rev === 'boolean') {
+                attachments = rev;
+                rev = undefined;
+            } else {
+                attachments = undefined;
+            }
+        }
+        return nativeGetDocFunc.call(db, id, rev, attachments, function(err, doc) {
             if (!err && !doc) {
                 var errMessage = 'Both err and data are undefined in getDoc call.\n' +
                     'db : ' + JSON.stringify(db, null, 2) + '\n' +
                     'id : ' + id + '\n' +
-                    'doc : ' + JSON.stringify(doc, null, 2) + '\n';
+                    'rev : ' + rev + '\n' +
+                    'attachments : ' + JSON.stringify(attachments, null, 2) + '\n';
                 return cb(new Error(errMessage));
             }
             return cb(err, doc);

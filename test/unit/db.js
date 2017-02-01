@@ -29,11 +29,11 @@ var runViewTest = function(test, testObj) {
 var runGetDocTest = function(test, testObj) {
     test.expect(2);
     var felix = fakeFelix({
-        getDoc: function(id, doc, cb) {
+        getDoc: function(id, rev, attachments, cb) {
             cb(testObj.err, testObj.result);
         }
     });
-    db.makeDbForTesting(felix).getDoc(null, null, function(err, result) {
+    db.makeDbForTesting(felix).getDoc(null, null, null, function(err, result) {
         test.deepEqual(err, testObj.expectedErr);
         test.deepEqual(result, testObj.expectedResult);
         test.done();
@@ -106,13 +106,80 @@ exports['when felix view query returns (undefined, undefined), we return error i
 exports['when felix getDoc query returns (undefined, undefined), we return error in callback'] = function(test) {
     test.expect(2);
     var felix = fakeFelix({
-        getDoc: function(id, doc, cb) {
+        getDoc: function(id, rev, attachments, cb) {
             cb(undefined, undefined);
         }
     });
-    db.makeDbForTesting(felix).getDoc(null, null, function(err, result) {
+    db.makeDbForTesting(felix).getDoc(null, null, null, function(err, result) {
         test.ok(!!err);
         test.equals(result, undefined);
         test.done();
     });
+};
+
+exports['view : no query args'] = function(test) {
+    test.expect(3);
+    var expectedDesign = 'design';
+    var expectedView = 'view';
+    var expectedCb = function(test) { test.done(); };
+
+    var felix = fakeFelix({
+        view: function(design, view, query, cb) {
+            test.equals(design, expectedDesign);
+            test.equals(view, expectedView);
+            test.equals(query, undefined);
+            cb(test);
+        }
+    });
+    db.makeDbForTesting(felix).view(expectedDesign, expectedView, expectedCb);
+};
+
+exports['getDoc : no rev'] = function(test) {
+    test.expect(3);
+    var expectedId = 'id';
+    var expectedAttachments = true;
+    var expectedCb = function(test) { test.done(); };
+
+    var felix = fakeFelix({
+        getDoc: function(id, rev, attachments, cb) {
+            test.equals(id, expectedId);
+            test.equals(rev, undefined);
+            test.equals(attachments, expectedAttachments);
+            cb(test);
+        }
+    });
+    db.makeDbForTesting(felix).getDoc(expectedId, expectedAttachments, expectedCb);
+};
+
+exports['getDoc : no attachments'] = function(test) {
+    test.expect(3);
+    var expectedId = 'id';
+    var expectedRev = 'rev';
+    var expectedCb = function(test) { test.done(); };
+
+    var felix = fakeFelix({
+        getDoc: function(id, rev, attachments, cb) {
+            test.equals(id, expectedId);
+            test.equals(rev, expectedRev);
+            test.equals(attachments, undefined);
+            cb(test);
+        }
+    });
+    db.makeDbForTesting(felix).getDoc(expectedId, expectedRev, expectedCb);
+};
+
+exports['getDoc : no rev, no attachments'] = function(test) {
+    test.expect(3);
+    var expectedId = 'id';
+    var expectedCb = function(test) { test.done(); };
+
+    var felix = fakeFelix({
+        getDoc: function(id, rev, attachments, cb) {
+            test.equals(id, expectedId);
+            test.equals(rev, undefined);
+            test.equals(attachments, undefined);
+            cb(test);
+        }
+    });
+    db.makeDbForTesting(felix).getDoc(expectedId, expectedCb);
 };
