@@ -149,7 +149,7 @@ exports['registration sets up schedule'] = function(test) {
             test.deepEqual(msg1, {
                 to: '+1234',
                 message: 'Mustaches.  Overrated or underrated?',
-                sms_info: { number_of_sms: 1, is_truncated: false }
+                sms_info: { number_of_sms: 1, is_truncated: false },
                 uuid: 'test-uuid'
             });
         }
@@ -245,7 +245,7 @@ exports['registration sets up schedule using bool_expr'] = function(test) {
             test.deepEqual(msg1, {
                 to: '+1234',
                 message: 'Mustaches.  Overrated or underrated?',
-                sms_info: { number_of_sms: 1, is_truncated: false }
+                sms_info: { number_of_sms: 1, is_truncated: false },
                 uuid: 'test-uuid'
             });
         }
@@ -342,7 +342,7 @@ exports['two phase registration sets up schedule using bool_expr'] = function(te
             test.deepEqual(msg1, {
                 to: '+1234',
                 message: 'Remember to visit barry',
-                sms_info: { number_of_sms: 1, is_truncated: false }
+                sms_info: { number_of_sms: 1, is_truncated: false },
                 uuid: 'test-uuid'
             });
         }
