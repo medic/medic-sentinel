@@ -227,7 +227,8 @@ exports['registration sets up responses'] = function(test) {
             delete msg0.uuid;
             test.deepEqual(msg0, {
                 to: '+1234',
-                message: 'thanks Julie'
+                message: 'thanks Julie',
+                sms_info: { number_of_sms: 1, is_truncated: false }
             });
         }
 
@@ -244,7 +245,8 @@ exports['registration sets up responses'] = function(test) {
             delete msg1.uuid;
             test.deepEqual(msg1, {
                 to: '+987',
-                message: 'thanks Sam'
+                message: 'thanks Sam',
+                sms_info: { number_of_sms: 1, is_truncated: false }
             });
         }
         test.done();
@@ -292,7 +294,8 @@ exports['registration responses support locale'] = function(test) {
             delete msg0.uuid;
             test.deepEqual(msg0, {
                 to: '+1234',
-                message: 'gracias Julie'
+                message: 'gracias Julie',
+                sms_info: { number_of_sms: 1, is_truncated: false }
             });
         }
 
@@ -309,7 +312,8 @@ exports['registration responses support locale'] = function(test) {
             delete msg1.uuid;
             test.deepEqual(msg1, {
                 to: '+987',
-                message: 'gracias Sam'
+                message: 'gracias Sam',
+                sms_info: { number_of_sms: 1, is_truncated: false }
             });
         }
         test.done();
