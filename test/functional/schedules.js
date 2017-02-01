@@ -132,7 +132,8 @@ exports['registration sets up schedule'] = function(test) {
             delete msg0.uuid;
             test.deepEqual(msg0, {
                 to: '+1234',
-                message: 'thanks Julie'
+                message: 'thanks Julie',
+                sms_info: { number_of_sms: 1, is_truncated: false }
             });
         }
 
@@ -148,6 +149,7 @@ exports['registration sets up schedule'] = function(test) {
             test.deepEqual(msg1, {
                 to: '+1234',
                 message: 'Mustaches.  Overrated or underrated?',
+                sms_info: { number_of_sms: 1, is_truncated: false }
                 uuid: 'test-uuid'
             });
         }
@@ -226,7 +228,8 @@ exports['registration sets up schedule using bool_expr'] = function(test) {
             delete msg0.uuid;
             test.deepEqual(msg0, {
                 to: '+1234',
-                message: 'thanks Julie'
+                message: 'thanks Julie',
+                sms_info: { number_of_sms: 1, is_truncated: false }
             });
         }
 
@@ -242,6 +245,7 @@ exports['registration sets up schedule using bool_expr'] = function(test) {
             test.deepEqual(msg1, {
                 to: '+1234',
                 message: 'Mustaches.  Overrated or underrated?',
+                sms_info: { number_of_sms: 1, is_truncated: false }
                 uuid: 'test-uuid'
             });
         }
@@ -321,7 +325,8 @@ exports['two phase registration sets up schedule using bool_expr'] = function(te
             delete msg0.uuid;
             test.deepEqual(msg0, {
                 to: '+1234',
-                message: 'thanks for registering barry'
+                message: 'thanks for registering barry',
+                sms_info: { number_of_sms: 1, is_truncated: false }
             });
         }
 
@@ -337,6 +342,7 @@ exports['two phase registration sets up schedule using bool_expr'] = function(te
             test.deepEqual(msg1, {
                 to: '+1234',
                 message: 'Remember to visit barry',
+                sms_info: { number_of_sms: 1, is_truncated: false }
                 uuid: 'test-uuid'
             });
         }
@@ -415,7 +421,8 @@ exports['no schedule using false bool_expr'] = function(test) {
             delete msg0.uuid;
             test.deepEqual(msg0, {
                 to: '+1234',
-                message: 'thanks Julie'
+                message: 'thanks Julie',
+                sms_info: { number_of_sms: 1, is_truncated: false }
             });
         }
 
