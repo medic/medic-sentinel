@@ -1,3 +1,8 @@
+/*
+ * Transitions runner.  Set up the changes listener and apply each transition
+ * serially to a change.
+ */
+
 var _ = require('underscore'),
     follow = require('follow'),
     async = require('async'),
@@ -78,6 +83,11 @@ var processChange = function(change, callback) {
     });
 };
 
+/*
+ * Load transitions using `require` based on what is in AVAILABLE_TRANSITIONS
+ * constant and what is enabled in the `transitions` property in the settings
+ * data.  Log warnings on failure.
+ */
 var loadTransitions = function() {
   var self = module.exports;
   _.each(config.get('transitions'), function(conf, key) {
@@ -192,7 +202,11 @@ var finalize = function(options, callback) {
 
 /*
  * All transitions reference the same change.doc and work in series to
- * apply changes to it.
+ * apply changes to it.  A transition is free to make async calls but the next
+ * transition will only run after the previous transitions's callback is
+ * called.  This is a performance optimization that allows us to apply N
+ * transitions (updates) to a document with the cost of a single database
+ * change/write.
  */
 var applyTransition = function(options, callback) {
 
@@ -330,9 +344,10 @@ var updateMetaData = function(seq, callback) {
     });
 };
 
+/*
+ *  Setup changes feed listener.
+ */
 var attach = function() {
-
-
 
     // tell everyone we're here
     logger.info('transitions: processing enabled');
