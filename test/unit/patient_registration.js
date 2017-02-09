@@ -228,7 +228,11 @@ exports['registration sets up responses'] = function(test) {
             test.deepEqual(msg0, {
                 to: '+1234',
                 message: 'thanks Julie',
-                sms_info: { number_of_sms: 1, is_truncated: false }
+                sms_info: {
+                    number_of_sms: 1,
+                    is_truncated: false,
+                    char_set: 'GSM 03.38'
+                }
             });
         }
 
@@ -246,7 +250,11 @@ exports['registration sets up responses'] = function(test) {
             test.deepEqual(msg1, {
                 to: '+987',
                 message: 'thanks Sam',
-                sms_info: { number_of_sms: 1, is_truncated: false }
+                sms_info: {
+                    number_of_sms: 1,
+                    is_truncated: false,
+                    char_set: 'GSM 03.38'
+                }
             });
         }
         test.done();
@@ -295,7 +303,11 @@ exports['registration responses support locale'] = function(test) {
             test.deepEqual(msg0, {
                 to: '+1234',
                 message: 'gracias Julie',
-                sms_info: { number_of_sms: 1, is_truncated: false }
+                sms_info: {
+                    number_of_sms: 1,
+                    is_truncated: false,
+                    char_set: 'GSM 03.38'
+                }
             });
         }
 
@@ -313,7 +325,11 @@ exports['registration responses support locale'] = function(test) {
             test.deepEqual(msg1, {
                 to: '+987',
                 message: 'gracias Sam',
-                sms_info: { number_of_sms: 1, is_truncated: false }
+                sms_info: {
+                    number_of_sms: 1,
+                    is_truncated: false,
+                    char_set: 'GSM 03.38'
+                }
             });
         }
         test.done();
