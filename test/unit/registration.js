@@ -107,7 +107,7 @@ exports['add_patient trigger creates a new patient'] = function(test) {
     sinon.stub(transition, 'validate').callsArgWith(2);
     transition.onMatch(change, db, audit, function() {
         test.equals(get.callCount, 1);
-        test.equals(get.args[0][0], 'patient-'+patientId);
+        test.equals(get.args[0][0], utils.getPatientDocumentId(patientId));
         test.equals(view.callCount, 1);
         test.equals(view.args[0][0], 'medic-client');
         test.equals(view.args[0][1], 'people_by_phone');
@@ -134,7 +134,7 @@ exports['add_patient does nothing when patient already added'] = function(test) 
         fields: { patient_name: 'jack' }
     } };
     var view = sinon.stub().callsArgWith(3, null, { rows: [ { doc: { parent: { _id: 'papa' } } } ] });
-    var get = sinon.stub().callsArgWith(1, undefined, {_id: 'patient-' + patientId});
+    var get = sinon.stub().callsArgWith(1, undefined, {_id: utils.getPatientDocumentId(patientId)});
     var db = { medic: { view: view, get: get } };
     var saveDoc = sinon.stub().callsArgWith(1);
     var audit = { saveDoc: saveDoc };
@@ -146,7 +146,7 @@ exports['add_patient does nothing when patient already added'] = function(test) 
     sinon.stub(transition, 'validate').callsArgWith(2);
     transition.onMatch(change, db, audit, function() {
         test.equals(get.callCount, 1);
-        test.equals(get.args[0][0], 'patient-'+patientId);
+        test.equals(get.args[0][0], utils.getPatientDocumentId(patientId));
         test.equals(saveDoc.callCount, 0);
         test.done();
     });

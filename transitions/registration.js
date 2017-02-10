@@ -313,7 +313,7 @@ module.exports = {
             patientId = doc.patient_id,
             patientNameField = _.first(options.params) || 'patient_name';
 
-        db.medic.get('patient-' + patientId, function(err, patientContact) {
+        db.medic.get(utils.getPatientDocumentId(patientId), function(err, patientContact) {
             if (err && err.statusCode !== 404) {
                 return callback(err);
             }
@@ -332,7 +332,7 @@ module.exports = {
                 var contact = _.result(_.first(result.rows), 'doc');
                 // create a new patient with this patient_id
                 var patient = {
-                    _id: 'patient-' + patientId,
+                    _id: utils.getPatientDocumentId(patientId),
                     name: doc.fields[patientNameField],
                     parent: contact && contact.parent,
                     reported_date: doc.reported_date,

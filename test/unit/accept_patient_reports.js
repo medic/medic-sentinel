@@ -61,16 +61,59 @@ exports['onMatch with matching form calls getRegistrations and then matchRegistr
     getRegistrations = sinon.stub(utils, 'getRegistrations').callsArgWithAsync(1, null, []);
     matchRegistrations = sinon.stub(transition, 'matchRegistrations').callsArgWithAsync(1, null, true);
 
+    var db = {
+        medic: {
+            head: sinon.stub().callsArgWith(1)
+        }
+    };
+
     transition.onMatch({
         doc: {
-            form: 'x'
+            form: 'x',
+            fields: { patient_id: 'x' }
         }
-    }, {}, {}, function(err, complete) {
+    }, db, {}, function(err, complete) {
         test.equals(complete, true);
 
         test.equals(getRegistrations.called, true);
         test.equals(matchRegistrations.called, true);
 
+        test.done();
+    });
+};
+
+exports['onMatch with no patient id adds error msg and response'] = function(test) {
+
+    var getRegistrations,
+        matchRegistrations;
+
+    sinon.stub(transition, 'getAcceptedReports').returns([ { form: 'x' }, { form: 'z' } ]);
+
+    getRegistrations = sinon.stub(utils, 'getRegistrations').callsArgWithAsync(1, null, []);
+    matchRegistrations = sinon.stub(transition, 'matchRegistrations').callsArgWithAsync(1, null, true);
+
+    var db = {
+        medic: {
+            head: sinon.stub().callsArgWith(1, {statusCode: 404})
+        }
+    };
+
+    var doc = {
+        form: 'x',
+        fields: { patient_id: 'x' }
+    };
+
+    transition.onMatch({
+        doc: doc
+    }, db, {}, function() {
+        // FIXME: is this the right error to check for if there is no patient contact?
+        test.ok(doc.errors);
+        test.equals(doc.errors[0].message, 'not found x');
+        test.ok(doc.tasks);
+        test.equals(
+            _.first(_.first(doc.tasks).messages).message,
+            'not found x'
+        );
         test.done();
     });
 };
