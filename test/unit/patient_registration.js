@@ -292,7 +292,7 @@ exports['registration responses support locale'] = function(test) {
             delete msg0.uuid;
             test.deepEqual(msg0, {
                 to: '+1234',
-                message: 'gracias Julie',
+                message: 'gracias Julie'
             });
         }
 
