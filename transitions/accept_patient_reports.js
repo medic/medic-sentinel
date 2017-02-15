@@ -223,12 +223,24 @@ module.exports = {
                 return callback(null, true);
             }
 
-            module.exports.handleReport({
-                db: _db,
-                audit: _audit,
-                doc: doc,
-                report: report
-            }, callback);
+            _db.medic.head(utils.getPatientDocumentId(doc.fields.patientId), function(err) {
+                if (err) {
+                    if (err.statusCode === 404) {
+                        // FIXME: formalise this error somehow?
+                        messages.addError('something?');
+                        return callback(null, true);
+                    }
+
+                    return callback(err);
+                }
+
+                module.exports.handleReport({
+                    db: _db,
+                    audit: _audit,
+                    doc: doc,
+                    report: report
+                }, callback);
+            });
         });
     }
 };

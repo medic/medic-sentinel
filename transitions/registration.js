@@ -313,17 +313,15 @@ module.exports = {
             patientId = doc.patient_id,
             patientNameField = _.first(options.params) || 'patient_name';
 
-        utils.getRegistrations({
-            db: db,
-            id: patientId
-        }, function(err, registrations) {
-            if (err) {
+        db.medic.get(utils.getPatientDocumentId(patientId), function(err, patientContact) {
+            if (err && err.statusCode !== 404) {
                 return callback(err);
             }
-            if (registrations.length) {
-                // patient already registered, no action required
+
+            if (patientContact) {
                 return callback();
             }
+
             db.medic.view('medic-client', 'people_by_phone', {
                 key: [ doc.from ],
                 include_docs: true
@@ -334,7 +332,7 @@ module.exports = {
                 var contact = _.result(_.first(result.rows), 'doc');
                 // create a new patient with this patient_id
                 var patient = {
-                    _id: 'patient-' + patientId,
+                    _id: utils.getPatientDocumentId(patientId),
                     name: doc.fields[patientNameField],
                     parent: contact && contact.parent,
                     reported_date: doc.reported_date,
