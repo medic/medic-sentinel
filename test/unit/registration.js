@@ -95,7 +95,8 @@ exports['add_patient trigger creates a new patient'] = function(test) {
     } };
     // return expected view results when searching for people_by_phone
     var view = sinon.stub().callsArgWith(3, null, { rows: [ { doc: { parent: { _id: submitterId } } } ] });
-    var db = { medic: { view: view } };
+    var get = sinon.stub().callsArgWith(1, {statusCode: 404});
+    var db = { medic: { view: view, get: get } };
     var saveDoc = sinon.stub().callsArgWith(1);
     var audit = { saveDoc: saveDoc };
     var eventConfig = {
@@ -104,10 +105,9 @@ exports['add_patient trigger creates a new patient'] = function(test) {
     };
     sinon.stub(config, 'get').returns([ eventConfig ]);
     sinon.stub(transition, 'validate').callsArgWith(2);
-    var getRegistrations = sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, []);
     transition.onMatch(change, db, audit, function() {
-        test.equals(getRegistrations.callCount, 1);
-        test.equals(getRegistrations.args[0][0].id, patientId);
+        test.equals(get.callCount, 1);
+        test.equals(get.args[0][0], 'patient-'+patientId);
         test.equals(view.callCount, 1);
         test.equals(view.args[0][0], 'medic-client');
         test.equals(view.args[0][1], 'people_by_phone');
@@ -134,7 +134,8 @@ exports['add_patient does nothing when patient already added'] = function(test) 
         fields: { patient_name: 'jack' }
     } };
     var view = sinon.stub().callsArgWith(3, null, { rows: [ { doc: { parent: { _id: 'papa' } } } ] });
-    var db = { medic: { view: view } };
+    var get = sinon.stub().callsArgWith(1, undefined, {_id: 'patient-' + patientId});
+    var db = { medic: { view: view, get: get } };
     var saveDoc = sinon.stub().callsArgWith(1);
     var audit = { saveDoc: saveDoc };
     var eventConfig = {
@@ -143,10 +144,9 @@ exports['add_patient does nothing when patient already added'] = function(test) 
     };
     sinon.stub(config, 'get').returns([ eventConfig ]);
     sinon.stub(transition, 'validate').callsArgWith(2);
-    var getRegistrations = sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, [ { _id: 'xyz' } ]);
     transition.onMatch(change, db, audit, function() {
-        test.equals(getRegistrations.callCount, 1);
-        test.equals(getRegistrations.args[0][0].id, patientId);
+        test.equals(get.callCount, 1);
+        test.equals(get.args[0][0], 'patient-'+patientId);
         test.equals(saveDoc.callCount, 0);
         test.done();
     });
@@ -162,7 +162,8 @@ exports['add_patient event parameter overwrites the default property for the nam
         fields: { name: patientName }
     } };
     var view = sinon.stub().callsArgWith(3, null, { rows: [ { doc: { parent: { _id: 'papa' } } } ] });
-    var db = { medic: { view: view } };
+    var get = sinon.stub().callsArgWith(1, {statusCode: 404});
+    var db = { medic: { view: view, get: get } };
     var saveDoc = sinon.stub().callsArgWith(1);
     var audit = { saveDoc: saveDoc };
     var eventConfig = {
@@ -171,7 +172,6 @@ exports['add_patient event parameter overwrites the default property for the nam
     };
     sinon.stub(config, 'get').returns([ eventConfig ]);
     sinon.stub(transition, 'validate').callsArgWith(2);
-    sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, [ ]);
     transition.onMatch(change, db, audit, function() {
         test.equals(saveDoc.callCount, 1);
         test.equals(saveDoc.args[0][0].name, patientName);
