@@ -310,15 +310,15 @@ module.exports = {
         var doc = options.doc,
             db = options.db,
             audit = options.audit,
-            patientId = doc.patient_id,
+            patientShortcode = doc.patient_id,
             patientNameField = _.first(options.params) || 'patient_name';
 
-        db.medic.get(utils.getPatientDocumentId(patientId), function(err, patientContact) {
+        utils.getPatientContactUuid(db, patientShortcode, function(err, patientUuid) {
             if (err && err.statusCode !== 404) {
                 return callback(err);
             }
 
-            if (patientContact) {
+            if (patientUuid) {
                 return callback();
             }
 
@@ -332,12 +332,11 @@ module.exports = {
                 var contact = _.result(_.first(result.rows), 'doc');
                 // create a new patient with this patient_id
                 var patient = {
-                    _id: utils.getPatientDocumentId(patientId),
                     name: doc.fields[patientNameField],
                     parent: contact && contact.parent,
                     reported_date: doc.reported_date,
                     type: 'person',
-                    patient_id: patientId
+                    patient_id: patientShortcode
                 };
                 // include the DOB if it was generated on report
                 if (doc.birth_date) {

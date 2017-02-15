@@ -223,7 +223,7 @@ module.exports = {
                 return callback(null, true);
             }
 
-            _db.medic.head(utils.getPatientDocumentId(doc.fields.patientId), function(err) {
+            utils.getPatientContactUuid(_db, doc.fields.patientId, function(err) {
                 if (err) {
                     if (err.statusCode === 404) {
                         // FIXME: formalise this error somehow?
