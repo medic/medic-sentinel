@@ -215,7 +215,7 @@ module.exports = {
         add_patient: function(options, cb) {
             // if we already have a patient id then return
             if (options.doc.patient_id) {
-                return;
+                return cb();
             }
 
             async.series([
@@ -289,7 +289,7 @@ module.exports = {
     setId: function(options, callback) {
         var doc = options.doc,
             db = db || options.db,
-            id = ids.generate(doc.id),
+            id = ids.generate(doc._id),
             self = module.exports;
 
         utils.getRegistrations({

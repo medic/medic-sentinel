@@ -2,7 +2,8 @@ var sinon = require('sinon'),
     transition = require('../../transitions/registration'),
     utils = require('../../lib/utils'),
     schedules = require('../../lib/schedules'),
-    config = require('../../config');
+    config = require('../../config'),
+    ids = require('../../lib/ids');
 
 exports.tearDown = function(callback) {
     if (config.get.restore) {
@@ -25,6 +26,9 @@ exports.tearDown = function(callback) {
     }
     if (schedules.assignSchedule.restore) {
         schedules.assignSchedule.restore();
+    }
+    if (ids.generate.restore) {
+        ids.generate.restore();
     }
     callback();
 };
@@ -87,7 +91,6 @@ exports['add_patient trigger creates a new patient'] = function(test) {
     var dob = '2017-03-31T01:15:09.000Z';
     var change = { doc: {
         form: 'R',
-        patient_id: patientId,
         reported_date: 53,
         from: senderPhoneNumber,
         fields: { patient_name: patientName },
@@ -105,6 +108,9 @@ exports['add_patient trigger creates a new patient'] = function(test) {
     };
     sinon.stub(config, 'get').returns([ eventConfig ]);
     sinon.stub(transition, 'validate').callsArgWith(2);
+    sinon.stub(ids, 'generate').returns(patientId);
+    sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, []);
+
     transition.onMatch(change, db, audit, function() {
         test.equals(get.callCount, 1);
         test.equals(get.args[0][0], utils.getPatientDocumentId(patientId));
