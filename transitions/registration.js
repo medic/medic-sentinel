@@ -223,8 +223,10 @@ module.exports = {
                 _.partial(module.exports.addPatient, options)
             ], cb);
         },
-        // Deprecated name for add_patient
-        add_patient_id: module.exports.triggers.addPatient,
+        add_patient_id: function(options, cb) {
+            // Deprecated name for add_patient
+            module.exports.triggers.add_patient(options, cb);
+        },
         add_expected_date: function(options, cb) {
             module.exports.setExpectedBirthDate(options.doc);
             cb();

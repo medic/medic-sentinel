@@ -46,6 +46,9 @@ exports.tearDown = function(callback) {
     if (utils.getRegistrations.restore) {
         utils.getRegistrations.restore();
     }
+    if (utils.getPatientContactUuid.restore) {
+        utils.getPatientContactUuid.restore();
+    }
     if (transition.getConfig.restore) {
         transition.getConfig.restore();
     }
@@ -97,7 +100,9 @@ exports['setBirthDate does not set birthdate if no fields given'] = function(tes
 
 exports['valid form adds patient_id and expected_date'] = function(test) {
 
-    sinon.stub(utils, 'getRegistrations').callsArgWithAsync(1, null, []);
+    sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, []);
+    // doc already exists bc we aren't testing the create patient step
+    sinon.stub(utils, 'getPatientContactUuid').callsArgWith(2, null, {_id: 'UUID'});
 
     var doc = {
         form: 'BIR',

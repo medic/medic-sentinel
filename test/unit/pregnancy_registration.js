@@ -95,6 +95,7 @@ exports.setUp = function(callback) {
 exports.tearDown = function(callback) {
     _.each([
         utils.getRegistrations,
+        utils.getPatientContactUuid,
         utils.getClinicPhone,
         transition.getConfig,
         utils.getForm
@@ -196,7 +197,8 @@ exports['valid adds lmp_date and patient_id'] = function(test) {
     var doc,
         start = moment().startOf('week').subtract(5, 'weeks');
 
-    sinon.stub(utils, 'getRegistrations').callsArgWithAsync(1, null, []);
+    sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, []);
+    sinon.stub(utils, 'getPatientContactUuid').callsArgWith(2, null, {_id: 'uuid'});
 
     doc = {
         form: 'y',
@@ -222,7 +224,8 @@ exports['zero lmp value only registers patient'] = function(test) {
 
     test.expect(5);
 
-    sinon.stub(utils, 'getRegistrations').callsArgWithAsync(1, null, []);
+    sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, []);
+    sinon.stub(utils, 'getPatientContactUuid').callsArgWith(2, null, {_id: 'uuid'});
 
     var doc = {
         form: 'y',
@@ -247,7 +250,8 @@ exports['zero lmp value only registers patient'] = function(test) {
 exports['id only logic with valid name'] = function(test) {
     var doc;
 
-    sinon.stub(utils, 'getRegistrations').callsArgWithAsync(1, null, []);
+    sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, []);
+    sinon.stub(utils, 'getPatientContactUuid').callsArgWith(2, null, {_id: 'uuid'});
 
     doc = {
         form: 'y',
@@ -274,7 +278,8 @@ exports['id only logic with invalid name'] = function(test) {
     test.expect(5);
     var doc;
 
-    sinon.stub(utils, 'getRegistrations').callsArgWithAsync(1, null, []);
+    sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, []);
+    sinon.stub(utils, 'getPatientContactUuid').callsArgWith(2, null, {_id: 'uuid'});
 
     doc = {
         form: 'y',
