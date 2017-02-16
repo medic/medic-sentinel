@@ -17,6 +17,9 @@ exports.tearDown = function(callback) {
     if (utils.getRegistrations.restore) {
         utils.getRegistrations.restore();
     }
+    if (utils.getPatientContactUuid.restore) {
+        utils.getPatientContactUuid.restore();
+    }
     callback();
 };
 
@@ -54,28 +57,25 @@ exports['onMatch callback empty if form not included'] = function(test) {
 exports['onMatch with matching form calls getRegistrations and then matchRegistrations'] = function(test) {
 
     var getRegistrations,
+        getPatientContactUuid,
         matchRegistrations;
 
     sinon.stub(transition, 'getAcceptedReports').returns([ { form: 'x' }, { form: 'z' } ]);
 
-    getRegistrations = sinon.stub(utils, 'getRegistrations').callsArgWithAsync(1, null, []);
-    matchRegistrations = sinon.stub(transition, 'matchRegistrations').callsArgWithAsync(1, null, true);
-
-    var db = {
-        medic: {
-            head: sinon.stub().callsArgWith(1)
-        }
-    };
+    getRegistrations = sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, []);
+    getPatientContactUuid = sinon.stub(utils, 'getPatientContactUuid').callsArgWith(2);
+    matchRegistrations = sinon.stub(transition, 'matchRegistrations').callsArgWith(1, null, true);
 
     transition.onMatch({
         doc: {
             form: 'x',
             fields: { patient_id: 'x' }
         }
-    }, db, {}, function(err, complete) {
+    }, {}, {}, function(err, complete) {
         test.equals(complete, true);
 
         test.equals(getRegistrations.called, true);
+        test.equals(getPatientContactUuid.called, true);
         test.equals(matchRegistrations.called, true);
 
         test.done();
@@ -85,18 +85,14 @@ exports['onMatch with matching form calls getRegistrations and then matchRegistr
 exports['onMatch with no patient id adds error msg and response'] = function(test) {
 
     var getRegistrations,
+        getPatientContactUuid,
         matchRegistrations;
 
     sinon.stub(transition, 'getAcceptedReports').returns([ { form: 'x' }, { form: 'z' } ]);
 
-    getRegistrations = sinon.stub(utils, 'getRegistrations').callsArgWithAsync(1, null, []);
-    matchRegistrations = sinon.stub(transition, 'matchRegistrations').callsArgWithAsync(1, null, true);
-
-    var db = {
-        medic: {
-            head: sinon.stub().callsArgWith(1, {statusCode: 404})
-        }
-    };
+    getRegistrations = sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, []);
+    getPatientContactUuid = sinon.stub(utils, 'getPatientContactUuid').callsArgWith(2, {statusCode: 404});
+    matchRegistrations = sinon.stub(transition, 'matchRegistrations').callsArgWith(1, null, true);
 
     var doc = {
         form: 'x',
@@ -105,15 +101,9 @@ exports['onMatch with no patient id adds error msg and response'] = function(tes
 
     transition.onMatch({
         doc: doc
-    }, db, {}, function() {
-        // FIXME: is this the right error to check for if there is no patient contact?
-        test.ok(doc.errors);
-        test.equals(doc.errors[0].message, 'not found x');
-        test.ok(doc.tasks);
-        test.equals(
-            _.first(_.first(doc.tasks).messages).message,
-            'not found x'
-        );
+    }, {}, {}, function() {
+        test.ok(doc.errors, 'There should be an error');
+        test.equals(doc.errors[0].message, 'sys.registration_not_found');
         test.done();
     });
 };
@@ -192,7 +182,7 @@ exports['matchRegistrations with registrations adds reply'] = function(test) {
 
 
 exports['adding silence_type to matchRegistrations calls silenceReminders'] = function(test) {
-    sinon.stub(transition, 'silenceReminders').callsArgWithAsync(1, null);
+    sinon.stub(transition, 'silenceReminders').callsArgWith(1, null);
 
     transition.matchRegistrations({
         doc: {},
@@ -213,7 +203,7 @@ exports['silenceReminders testing'] = function(test) {
         now = moment(),
         registration;
 
-    sinon.stub(audit, 'saveDoc').callsArgWithAsync(1, null);
+    sinon.stub(audit, 'saveDoc').callsArgWith(1, null);
 
     // mock up a registered_patients view result
     registration = {
@@ -307,7 +297,7 @@ exports['empty silence_for option clears all reminders'] = function(test) {
         now = moment(),
         registration;
 
-    sinon.stub(audit, 'saveDoc').callsArgWithAsync(1, null);
+    sinon.stub(audit, 'saveDoc').callsArgWith(1, null);
 
     // mock up a registered_patients view result
     registration = {
@@ -383,7 +373,7 @@ exports['when silence_type is comma separated act on multiple schedules'] = func
         now = moment(),
         registration;
 
-    sinon.stub(audit, 'saveDoc').callsArgWithAsync(1, null);
+    sinon.stub(audit, 'saveDoc').callsArgWith(1, null);
 
     // mock up a registered_patients view result
     registration = {

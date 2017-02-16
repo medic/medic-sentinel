@@ -212,13 +212,19 @@ module.exports = {
         });
     },
     triggers: {
-        add_patient_id: function(options, cb) {
+        add_patient: function(options, cb) {
             // if we already have a patient id then return
             if (options.doc.patient_id) {
                 return;
             }
-            module.exports.setId(options, cb);
+
+            async.series([
+                _.partial(module.exports.setId, options),
+                _.partial(module.exports.addPatient, options)
+            ], cb);
         },
+        // Deprecated name for add_patient
+        add_patient_id: module.exports.triggers.addPatient,
         add_expected_date: function(options, cb) {
             module.exports.setExpectedBirthDate(options.doc);
             cb();
@@ -232,13 +238,6 @@ module.exports = {
                 return cb('Please specify schedule name in settings.');
             }
             module.exports.assignSchedule(options, cb);
-        },
-        add_patient: function(options, cb) {
-            if (!options.doc.patient_id) {
-                // must have a patient id so we can find them later
-                return cb();
-            }
-            module.exports.addPatient(options, cb);
         }
     },
     addMessages: function(db, config, doc, callback) {

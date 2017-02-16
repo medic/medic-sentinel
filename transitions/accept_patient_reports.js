@@ -56,6 +56,30 @@ module.exports = {
             callback(null, true);
         }
     },
+    addRegistrationNotFoundMessage: function(document, reportConfig) {
+        var not_found_msg,
+            default_msg = {
+                doc: document,
+                message: 'sys.registration_not_found',
+                phone: messages.getRecipientPhone(document, 'from')
+            };
+        _.each(reportConfig.messages, function(msg) {
+            if (msg.event_type === 'registration_not_found') {
+                not_found_msg = {
+                    doc: document,
+                    message: messages.getMessage(msg.message, utils.getLocale(document)),
+                    phone: messages.getRecipientPhone(document, msg.recipient)
+                };
+            }
+        });
+        if (not_found_msg) {
+            messages.addMessage(not_found_msg);
+            messages.addError(not_found_msg.doc, not_found_msg.message);
+        } else {
+            messages.addMessage(default_msg);
+            messages.addError(default_msg.doc, default_msg.message);
+        }
+    },
     /* try to match a recipient return undefined otherwise */
     matchRegistrations: function(options, callback) {
         var registrations = options.registrations,
@@ -83,28 +107,7 @@ module.exports = {
             }, callback);
         }
 
-        var not_found_msg,
-            default_msg = {
-                doc: doc,
-                message: 'sys.registration_not_found',
-                phone: messages.getRecipientPhone(doc, 'from')
-            };
-        _.each(report.messages, function(msg) {
-            if (msg.event_type === 'registration_not_found') {
-                not_found_msg = {
-                    doc: doc,
-                    message: messages.getMessage(msg.message, locale),
-                    phone: messages.getRecipientPhone(doc, msg.recipient)
-                };
-            }
-        });
-        if (not_found_msg) {
-            messages.addMessage(not_found_msg);
-            messages.addError(not_found_msg.doc, not_found_msg.message);
-        } else {
-            messages.addMessage(default_msg);
-            messages.addError(default_msg.doc, default_msg.message);
-        }
+        module.exports.addRegistrationNotFoundMessage(doc, report);
         callback(null, true);
     },
     // find the messages to clear
@@ -226,8 +229,7 @@ module.exports = {
             utils.getPatientContactUuid(_db, doc.fields.patientId, function(err) {
                 if (err) {
                     if (err.statusCode === 404) {
-                        // FIXME: formalise this error somehow?
-                        messages.addError('something?');
+                        module.exports.addRegistrationNotFoundMessage(doc, report);
                         return callback(null, true);
                     }
 
