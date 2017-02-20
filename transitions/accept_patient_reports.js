@@ -5,6 +5,7 @@ var _ = require('underscore'),
     moment = require('moment'),
     validation = require('../lib/validation'),
     utils = require('../lib/utils'),
+    transitionUtils = require('./utils'),
     date = require('../date');
 
 module.exports = {
@@ -63,30 +64,6 @@ module.exports = {
             }
         );
     },
-    addRegistrationNotFoundMessage: function(document, reportConfig) {
-        var not_found_msg,
-            default_msg = {
-                doc: document,
-                message: 'sys.registration_not_found',
-                phone: messages.getRecipientPhone(document, 'from')
-            };
-        _.each(reportConfig.messages, function(msg) {
-            if (msg.event_type === 'registration_not_found') {
-                not_found_msg = {
-                    doc: document,
-                    message: messages.getMessage(msg.message, utils.getLocale(document)),
-                    phone: messages.getRecipientPhone(document, msg.recipient)
-                };
-            }
-        });
-        if (not_found_msg) {
-            messages.addMessage(not_found_msg);
-            messages.addError(not_found_msg.doc, not_found_msg.message);
-        } else {
-            messages.addMessage(default_msg);
-            messages.addError(default_msg.doc, default_msg.message);
-        }
-    },
     /* try to match a recipient return undefined otherwise */
     matchRegistrations: function(options, callback) {
         var registrations = options.registrations,
@@ -114,7 +91,7 @@ module.exports = {
             }, callback);
         }
 
-        module.exports.addRegistrationNotFoundMessage(doc, report);
+        transitionUtils.addRegistrationNotFoundMessage(doc, report);
         callback(null, true);
     },
     // find the messages to clear
@@ -229,7 +206,7 @@ module.exports = {
             utils.getPatientContactUuid(_db, doc.fields.patient_id, function(err) {
                 if (err) {
                     if (err.statusCode === 404) {
-                        module.exports.addRegistrationNotFoundMessage(doc, report);
+                        transitionUtils.addRegistrationNotFoundMessage(doc, report);
                         return callback(null, true);
                     }
 

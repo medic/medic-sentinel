@@ -2,6 +2,7 @@ var vm = require('vm'),
     _ = require('underscore'),
     async = require('async'),
     utils = require('../lib/utils'),
+    transitionUtils = require('./utils'),
     logger = require('../lib/logger'),
     messages = require('../lib/messages'),
     validation = require('../lib/validation'),
@@ -177,37 +178,63 @@ module.exports = {
                 return callback(null, true);
             }
 
-            var series = [];
-            _.each(config.events, function(event) {
-                var trigger = self.triggers[event.trigger];
-                if (!trigger) {
+            if (doc.fields && doc.fields.patient_id) {
+                // We're attaching this registration to an existing patient, let's
+                // make sure it's valid
+                // NB: if in the future we allow partners to configure the add_patient
+                //     trigger to support passing in their own patient shortcodes
+                //     we're going to have to change this logic:
+                //     https://github.com/medic/medic-webapp/issues/3000
+                return utils.getPatientContactUuid(db, doc.fields.patient_id, function(err) {
+                    if (err) {
+                        if (err.statusCode === 404) {
+                            transitionUtils.addRegistrationNotFoundMessage(doc, config);
+                            return callback(null, true);
+                        }
+
+                        return callback(err);
+                    } else {
+                        return self.fireConfiguredTriggers(db, audit, config, doc, callback);
+                    }
+                });
+            }
+
+            return self.fireConfiguredTriggers(db, audit, config, doc, callback);
+        });
+    },
+    fireConfiguredTriggers: function(db, audit, registrationConfig, doc, callback) {
+        var self = module.exports,
+            series = [];
+
+        _.each(registrationConfig.events, function(event) {
+            var trigger = self.triggers[event.trigger];
+            if (!trigger) {
+                return;
+            }
+            if (event.name === 'on_create') {
+                var obj = _.defaults({}, doc, doc.fields);
+                if (self.isBoolExprFalse(obj, event.bool_expr)) {
                     return;
                 }
-                if (event.name === 'on_create') {
-                    var obj = _.defaults({}, doc, doc.fields);
-                    if (self.isBoolExprFalse(obj, event.bool_expr)) {
-                        return;
-                    }
-                    var options = { db: db, audit: audit, doc: doc };
-                    if (event.params) {
-                        // params setting get sent as array
-                        options.params = event.params.split(',');
-                    }
-                    series.push(function(cb) {
-                        trigger.apply(null, [ options, cb ]);
-                    });
+                var options = { db: db, audit: audit, doc: doc };
+                if (event.params) {
+                    // params setting get sent as array
+                    options.params = event.params.split(',');
                 }
-            });
-
-            async.series(series, function(err) {
-                if (err) {
-                    return callback(err);
-                }
-                // add messages is done last so data on doc can be used in
-                // messages
-                self.addMessages(db, config, doc, function() {
-                    callback(null, true);
+                series.push(function(cb) {
+                    trigger.apply(null, [ options, cb ]);
                 });
+            }
+        });
+
+        async.series(series, function(err) {
+            if (err) {
+                return callback(err);
+            }
+            // add messages is done last so data on doc can be used in
+            // messages
+            self.addMessages(db, registrationConfig, doc, function() {
+                callback(null, true);
             });
         });
     },
