@@ -3,6 +3,7 @@ var _ = require('underscore'),
     transition = require('../../transitions/registration'),
     sinon = require('sinon'),
     utils = require('../../lib/utils'),
+    testUtils = require('../test_utils'),
     date = require('../../date');
 
 function getMessage(doc, idx) {
@@ -69,30 +70,13 @@ exports.setUp = function(callback) {
 };
 
 exports.tearDown = function(callback) {
-    if (utils.getRegistrations.restore) {
-        utils.getRegistrations.restore();
-    }
-
-    if (utils.getPatientContactUuid.restore) {
-        utils.getPatientContactUuid.restore();
-    }
-
-    if (transition.getConfig.restore) {
-        transition.getConfig.restore();
-    }
-
-    if (transition.getWeeksSinceDOB.restore) {
-        transition.getWeeksSinceDOB.restore();
-    }
-
-    if (transition.getDaysSinceDOB.restore) {
-        transition.getDaysSinceDOB.restore();
-    }
-
-    if (date.getDate.restore) {
-        date.getDate.restore();
-    }
-
+    testUtils.restore([
+        utils.getRegistrations,
+        utils.getPatientContactUuid,
+        transition.getConfig,
+        transition.getWeeksSinceDOB,
+        transition.getDaysSinceDOB,
+        date.getDate]);
     callback();
 };
 

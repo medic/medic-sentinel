@@ -1,6 +1,7 @@
 var transition = require('../../transitions/registration'),
     sinon = require('sinon'),
     moment = require('moment'),
+    testUtils = require('../test_utils'),
     utils = require('../../lib/utils');
 
 exports.setUp = function(callback) {
@@ -43,15 +44,10 @@ exports.setUp = function(callback) {
 };
 
 exports.tearDown = function(callback) {
-    if (utils.getRegistrations.restore) {
-        utils.getRegistrations.restore();
-    }
-    if (utils.getPatientContactUuid.restore) {
-        utils.getPatientContactUuid.restore();
-    }
-    if (transition.getConfig.restore) {
-        transition.getConfig.restore();
-    }
+    testUtils.restore([
+        utils.getRegistrations,
+        utils.getPatientContactUuid,
+        transition.getConfig]);
     callback();
 };
 

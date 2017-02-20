@@ -2,6 +2,7 @@ var _ = require('underscore'),
     transition = require('../../transitions/registration'),
     sinon = require('sinon'),
     moment = require('moment'),
+    testUtils = require('../test_utils'),
     utils = require('../../lib/utils');
 
 function getMessage(doc) {
@@ -93,17 +94,14 @@ exports.setUp = function(callback) {
 };
 
 exports.tearDown = function(callback) {
-    _.each([
+    testUtils.restore([
         utils.getRegistrations,
         utils.getPatientContactUuid,
         utils.getClinicPhone,
         transition.getConfig,
         utils.getForm
-    ], function(o) {
-        if (o.restore) {
-            o.restore();
-        }
-    });
+    ]);
+
     callback();
 };
 

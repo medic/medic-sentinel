@@ -1,7 +1,5 @@
-var _ = require('underscore');
-
 exports.restore = function(objs) {
-  _.each(objs, function(obj) {
+  objs.forEach(function(obj) {
     if (obj.restore) {
       obj.restore();
     }

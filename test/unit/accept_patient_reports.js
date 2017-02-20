@@ -2,39 +2,31 @@ var _ = require('underscore'),
     moment = require('moment'),
     sinon = require('sinon'),
     transition = require('../../transitions/accept_patient_reports'),
+    testUtils = require('../test_utils'),
     utils = require('../../lib/utils');
 
 exports.tearDown = function(callback) {
-    if (transition.getAcceptedReports.restore) {
-        transition.getAcceptedReports.restore();
-    }
-    if (transition.silenceReminders.restore) {
-        transition.silenceReminders.restore();
-    }
-    if (transition.matchRegistrations.restore) {
-        transition.matchRegistrations.restore();
-    }
-    if (utils.getRegistrations.restore) {
-        utils.getRegistrations.restore();
-    }
-    if (utils.getPatientContactUuid.restore) {
-        utils.getPatientContactUuid.restore();
-    }
+    testUtils.restore([
+        transition.getAcceptedReports,
+        transition.silenceReminders,
+        transition.matchRegistrations,
+        utils.getRegistrations,
+        utils.getPatientContactUuid]);
     callback();
 };
 
 exports['function signature'] = function(test) {
     test.ok(_.isFunction(transition.onMatch));
-    test.equals(transition.onMatch.length, 4);
+    test.equal(transition.onMatch.length, 4);
 
     test.ok(_.isFunction(transition.filter));
-    test.equals(transition.filter.length, 1);
+    test.equal(transition.filter.length, 1);
     test.done();
 };
 
 exports['filter validation'] = function(test) {
-    test.equals(transition.filter({}), false);
-    test.equals(transition.filter({
+    test.equal(transition.filter({}), false);
+    test.equal(transition.filter({
         form: 'x'
     }), false);
     test.done();
@@ -48,23 +40,18 @@ exports['onMatch callback empty if form not included'] = function(test) {
             form: 'y'
         }
     }, {}, {}, function(err, changed) {
-        test.equals(err, undefined);
-        test.equals(changed, undefined);
+        test.equal(err, undefined);
+        test.equal(changed, undefined);
         test.done();
     });
 };
 
 exports['onMatch with matching form calls getRegistrations and then matchRegistrations'] = function(test) {
-
-    var getRegistrations,
-        getPatientContactUuid,
-        matchRegistrations;
-
     sinon.stub(transition, 'getAcceptedReports').returns([ { form: 'x' }, { form: 'z' } ]);
 
-    getRegistrations = sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, []);
-    getPatientContactUuid = sinon.stub(utils, 'getPatientContactUuid').callsArgWith(2);
-    matchRegistrations = sinon.stub(transition, 'matchRegistrations').callsArgWith(1, null, true);
+    var getRegistrations = sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, []),
+        getPatientContactUuid = sinon.stub(utils, 'getPatientContactUuid').callsArgWith(2),
+        matchRegistrations = sinon.stub(transition, 'matchRegistrations').callsArgWith(1, null, true);
 
     transition.onMatch({
         doc: {
@@ -72,27 +59,23 @@ exports['onMatch with matching form calls getRegistrations and then matchRegistr
             fields: { patient_id: 'x' }
         }
     }, {}, {}, function(err, complete) {
-        test.equals(complete, true);
+        test.equal(complete, true);
 
-        test.equals(getRegistrations.called, true);
-        test.equals(getPatientContactUuid.called, true);
-        test.equals(matchRegistrations.called, true);
+        test.equal(getRegistrations.called, true);
+        test.equal(getPatientContactUuid.called, true);
+        test.equal(getPatientContactUuid.callCount, 1);
+        test.equal(getPatientContactUuid.args[0][1], 'x');
+        test.equal(matchRegistrations.called, true);
 
         test.done();
     });
 };
 
 exports['onMatch with no patient id adds error msg and response'] = function(test) {
-
-    var getRegistrations,
-        getPatientContactUuid,
-        matchRegistrations;
-
     sinon.stub(transition, 'getAcceptedReports').returns([ { form: 'x' }, { form: 'z' } ]);
-
-    getRegistrations = sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, []);
-    getPatientContactUuid = sinon.stub(utils, 'getPatientContactUuid').callsArgWith(2, {statusCode: 404});
-    matchRegistrations = sinon.stub(transition, 'matchRegistrations').callsArgWith(1, null, true);
+    sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, []);
+    sinon.stub(utils, 'getPatientContactUuid').callsArgWith(2, {statusCode: 404});
+    sinon.stub(transition, 'matchRegistrations').callsArgWith(1, null, true);
 
     var doc = {
         form: 'x',
@@ -103,7 +86,8 @@ exports['onMatch with no patient id adds error msg and response'] = function(tes
         doc: doc
     }, {}, {}, function() {
         test.ok(doc.errors, 'There should be an error');
-        test.equals(doc.errors[0].message, 'sys.registration_not_found');
+        test.equal(doc.errors.length, 1);
+        test.equal(doc.errors[0].message, 'sys.registration_not_found');
         test.done();
     });
 };
@@ -130,9 +114,9 @@ exports['matchRegistrations with no registrations adds error msg and response'] 
         }
     }, function() {
         test.ok(doc.errors);
-        test.equals(doc.errors[0].message, 'not found x');
+        test.equal(doc.errors[0].message, 'not found x');
         test.ok(doc.tasks);
-        test.equals(
+        test.equal(
             _.first(_.first(doc.tasks).messages).message,
             'not found x'
         );
@@ -172,7 +156,7 @@ exports['matchRegistrations with registrations adds reply'] = function(test) {
         }
     }, function() {
         test.ok(doc.tasks);
-        test.equals(
+        test.equal(
             _.first(_.first(doc.tasks).messages).message,
             'Thank you, woot. ANC visit for Archibald (559) has been recorded.'
         );
@@ -191,8 +175,8 @@ exports['adding silence_type to matchRegistrations calls silenceReminders'] = fu
             silence_type: 'x'
         }
     }, function(err, complete) {
-        test.equals(complete, true);
-        test.equals(transition.silenceReminders.callCount, 3);
+        test.equal(complete, true);
+        test.equal(transition.silenceReminders.callCount, 3);
 
         test.done();
     });
@@ -272,21 +256,21 @@ exports['silenceReminders testing'] = function(test) {
     }, function(err) {
         var tasks;
 
-        test.equals(err, null);
+        test.equal(err, null);
 
-        test.equals(audit.saveDoc.called, true);
+        test.equal(audit.saveDoc.called, true);
 
         tasks = registration.doc.scheduled_tasks;
 
-        test.equals(tasks[0].state, 'scheduled');
-        test.equals(tasks[1].state, 'scheduled');
-        test.equals(tasks[2].state, 'cleared');
-        test.equals(tasks[2].state_history[0].state, 'cleared');
-        test.equals(tasks[3].state, 'cleared');
-        test.equals(tasks[3].state_history[0].state, 'cleared');
-        test.equals(tasks[4].state, 'scheduled');
-        test.equals(tasks[5].state, 'scheduled');
-        test.equals(tasks[6].state, 'scheduled');
+        test.equal(tasks[0].state, 'scheduled');
+        test.equal(tasks[1].state, 'scheduled');
+        test.equal(tasks[2].state, 'cleared');
+        test.equal(tasks[2].state_history[0].state, 'cleared');
+        test.equal(tasks[3].state, 'cleared');
+        test.equal(tasks[3].state_history[0].state, 'cleared');
+        test.equal(tasks[4].state, 'scheduled');
+        test.equal(tasks[5].state, 'scheduled');
+        test.equal(tasks[6].state, 'scheduled');
 
         test.done();
     });
@@ -346,23 +330,23 @@ exports['empty silence_for option clears all reminders'] = function(test) {
     }, function(err) {
         var tasks;
 
-        test.equals(err, null);
+        test.equal(err, null);
 
-        test.equals(audit.saveDoc.called, true);
+        test.equal(audit.saveDoc.called, true);
 
         tasks = registration.doc.scheduled_tasks;
 
         // don't clear in the past
-        test.equals(tasks[0].state, 'scheduled');
+        test.equal(tasks[0].state, 'scheduled');
 
         // only clear schedule of the same type
-        test.equals(tasks[2].state, 'scheduled');
+        test.equal(tasks[2].state, 'scheduled');
 
-        test.equals(tasks[1].state, 'cleared');
-        test.equals(tasks[1].state_history[0].state, 'cleared');
-        test.equals(tasks[3].state, 'cleared');
-        test.equals(tasks[4].state, 'cleared');
-        test.equals(tasks[4].state_history[0].state, 'cleared');
+        test.equal(tasks[1].state, 'cleared');
+        test.equal(tasks[1].state_history[0].state, 'cleared');
+        test.equal(tasks[3].state, 'cleared');
+        test.equal(tasks[4].state, 'cleared');
+        test.equal(tasks[4].state_history[0].state, 'cleared');
 
         test.done();
     });
@@ -422,23 +406,23 @@ exports['when silence_type is comma separated act on multiple schedules'] = func
     }, function(err) {
         var tasks;
 
-        test.equals(err, null);
+        test.equal(err, null);
 
-        test.equals(audit.saveDoc.called, true);
+        test.equal(audit.saveDoc.called, true);
 
         tasks = registration.doc.scheduled_tasks;
 
         // don't clear in the past
-        test.equals(tasks[0].state, 'scheduled');
+        test.equal(tasks[0].state, 'scheduled');
 
-        test.equals(tasks[1].state, 'cleared');
-        test.equals(tasks[1].state_history[0].state, 'cleared');
-        test.equals(tasks[2].state, 'cleared');
-        test.equals(tasks[2].state_history[0].state, 'cleared');
-        test.equals(tasks[3].state, 'cleared');
-        test.equals(tasks[3].state_history[0].state, 'cleared');
-        test.equals(tasks[4].state, 'cleared');
-        test.equals(tasks[4].state_history[0].state, 'cleared');
+        test.equal(tasks[1].state, 'cleared');
+        test.equal(tasks[1].state_history[0].state, 'cleared');
+        test.equal(tasks[2].state, 'cleared');
+        test.equal(tasks[2].state_history[0].state, 'cleared');
+        test.equal(tasks[3].state, 'cleared');
+        test.equal(tasks[3].state_history[0].state, 'cleared');
+        test.equal(tasks[4].state, 'cleared');
+        test.equal(tasks[4].state_history[0].state, 'cleared');
 
         test.done();
     });

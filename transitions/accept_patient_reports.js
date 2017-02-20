@@ -226,7 +226,7 @@ module.exports = {
                 return callback(null, true);
             }
 
-            utils.getPatientContactUuid(_db, doc.fields.patientId, function(err) {
+            utils.getPatientContactUuid(_db, doc.fields.patient_id, function(err) {
                 if (err) {
                     if (err.statusCode === 404) {
                         module.exports.addRegistrationNotFoundMessage(doc, report);
