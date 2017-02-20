@@ -1,5 +1,6 @@
 var sinon = require('sinon'),
-    transition = require('../../transitions/accept_patient_reports');
+    transition = require('../../transitions/accept_patient_reports'),
+    utils = require('../../lib/utils');
 
 /*
  * Eventually transitions/registration.js and accept_patient_reports.js will
@@ -10,12 +11,9 @@ exports.tearDown = function(callback) {
     if (transition.getAcceptedReports.restore) {
         transition.getAcceptedReports.restore();
     }
-    callback();
-};
-
-exports.setUp = function(callback) {
-    // not required since these tests never pass pupil validations
-    // sinon.stub(utils, 'getRegistrations').callsArgWithAsync(1, null, []);
+    if (utils.translate.restore) {
+        utils.translate.restore();
+    }
     callback();
 };
 
@@ -36,6 +34,38 @@ exports['patient id failing validation adds error'] = function(test) {
                     content: 'bad id {{patient_id}}',
                     locale: 'en'
                 }]
+            }]
+        },
+        form: 'x'
+    }]);
+
+    transition.onMatch({
+        doc: doc
+    }, {}, {}, function(err, complete) {
+        test.equals(complete, true);
+        test.ok(doc.errors);
+        test.equals(doc.errors[0].message, 'bad id xxxx');
+        test.done();
+    });
+};
+
+exports['validations use translation_key'] = function(test) {
+    test.expect(3);
+
+    sinon.stub(utils, 'translate')
+        .withArgs('error.patient.id', 'en').returns('bad id {{patient_id}}');
+
+    var doc = {
+        patient_id: 'xxxx',
+        form: 'x'
+    };
+
+    sinon.stub(transition, 'getAcceptedReports').returns([{
+        validations: {
+            list: [{
+                property: 'patient_id',
+                rule: 'regex("\\w{5}")',
+                translation_key: 'error.patient.id'
             }]
         },
         form: 'x'

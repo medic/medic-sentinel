@@ -75,7 +75,7 @@ module.exports = {
                 if (msg.event_type === 'report_accepted') {
                     messages.addMessage({
                         doc: doc,
-                        message: messages.getMessage(msg.message, locale),
+                        message: messages.getMessage(msg, locale),
                         phone: messages.getRecipientPhone(doc, msg.recipient),
                         registrations: registrations
                     });
@@ -100,7 +100,7 @@ module.exports = {
             if (msg.event_type === 'registration_not_found') {
                 not_found_msg = {
                     doc: doc,
-                    message: messages.getMessage(msg.message, locale),
+                    message: messages.getMessage(msg, locale),
                     phone: messages.getRecipientPhone(doc, msg.recipient)
                 };
             }
