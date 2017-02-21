@@ -196,6 +196,7 @@ exports['assign_schedule event creates the named schedule'] = function(test) {
     sinon.stub(transition, 'validate').callsArgWith(2);
     var getRegistrations = sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, [ { _id: 'xyz' } ]);
     sinon.stub(schedules, 'getScheduleConfig').returns('someschedule');
+    sinon.stub(utils, 'getPatientContactUuid').callsArgWith(2, null);
     var assignSchedule = sinon.stub(schedules, 'assignSchedule').returns(true);
     transition.onMatch(change, db, audit, function() {
         test.equals(assignSchedule.callCount, 1);
