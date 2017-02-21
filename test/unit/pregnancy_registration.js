@@ -220,7 +220,7 @@ exports['valid adds lmp_date and patient_id'] = function(test) {
     });
 };
 
-exports['pregnancys on existing patients fail without valid patient id'] = function(test) {
+exports['pregnancies on existing patients fail without valid patient id'] = function(test) {
     sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, []);
     sinon.stub(utils, 'getPatientContactUuid').callsArgWith(2, {statusCode: 404});
 
@@ -243,7 +243,7 @@ exports['pregnancys on existing patients fail without valid patient id'] = funct
     });
 };
 
-exports['pregnancys on existing patients succeeds with a valid patient id'] = function(test) {
+exports['pregnancies on existing patients succeeds with a valid patient id'] = function(test) {
     sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, []);
     sinon.stub(utils, 'getPatientContactUuid').callsArgWith(2, null, {_id: 'uuid'});
 
