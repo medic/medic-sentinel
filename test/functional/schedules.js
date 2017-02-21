@@ -4,6 +4,7 @@ var _ = require('underscore'),
     sinon = require('sinon'),
     moment = require('moment'),
     utils = require('../../lib/utils'),
+    testUtils = require('../test_utils'),
     uuid = require('uuid'),
     contact = {
         phone: '+1234',
@@ -43,21 +44,13 @@ function getScheduledMessage(doc, idx) {
 }
 
 exports.tearDown = function(callback) {
-    if (utils.getRegistrations.restore) {
-        utils.getRegistrations.restore();
-    }
-    if (utils.translate.restore) {
-        utils.translate.restore();
-    }
-    if (transition.getConfig.restore) {
-        transition.getConfig.restore();
-    }
-    if (schedules.getScheduleConfig.restore) {
-        schedules.getScheduleConfig.restore();
-    }
-    if (uuid.v4.restore) {
-        uuid.v4.restore();
-    }
+    testUtils.restore([
+        utils.getRegistrations,
+        transition.getConfig,
+        schedules.getScheduleConfig,
+        uuid.v4,
+        utils.translate
+    ]);
     callback();
 };
 
@@ -376,6 +369,7 @@ exports['two phase registration sets up schedule using bool_expr'] = function(te
     });
     sinon.stub(uuid, 'v4').returns('test-uuid');
 
+    sinon.stub(utils, 'getPatientContactUuid').callsArgWith(2, null);
     var doc = {
         reported_date: moment().toISOString(),
         form: 'PATR',

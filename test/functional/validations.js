@@ -1,19 +1,17 @@
 var sinon = require('sinon'),
-    transition = require('../../transitions/accept_patient_reports'),
-    utils = require('../../lib/utils');
+    utils = require('../../lib/utils'),
+    testUtils = require('../test_utils'),
+    transition = require('../../transitions/accept_patient_reports');
 
 /*
  * Eventually transitions/registration.js and accept_patient_reports.js will
  * be merged one transition, probably called form events.
- * */
-
+ */
 exports.tearDown = function(callback) {
-    if (transition.getAcceptedReports.restore) {
-        transition.getAcceptedReports.restore();
-    }
-    if (utils.translate.restore) {
-        utils.translate.restore();
-    }
+    testUtils.restore([
+        transition.getAcceptedReports,
+        utils.translate
+    ]);
     callback();
 };
 
