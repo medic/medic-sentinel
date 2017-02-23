@@ -297,7 +297,7 @@ module.exports = {
                 return callback(err);
             }
             config.messages.forEach(function(msg) {
-                if (!msg.event_type) {
+                if (!msg.event_type || msg.event_type === 'report_accepted') {
                     messages.addMessage({
                         doc: doc,
                         phone: messages.getRecipientPhone(doc, msg.recipient),
