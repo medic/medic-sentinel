@@ -297,13 +297,8 @@ module.exports = {
                 return callback(err);
             }
             config.messages.forEach(function(msg) {
-                messages.addMessage({
-                    doc: doc,
-                    phone: messages.getRecipientPhone(doc, msg.recipient),
-                    message: messages.getMessage(msg, locale),
-                    options: extra,
-                    registrations: registrations
-                });
+                if (msg.event_type !== 'registration_not_found') {
+                }
             });
             callback();
         });
