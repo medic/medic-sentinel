@@ -7,7 +7,7 @@ var vm = require('vm'),
     messages = require('../lib/messages'),
     validation = require('../lib/validation'),
     schedules = require('../lib/schedules'),
-    reports = require('./accept_patient_reports'),
+    acceptPatientReports = require('./accept_patient_reports'),
     ids = require('../lib/ids'),
     moment = require('moment'),
     config = require('../config'),
@@ -280,7 +280,7 @@ module.exports = {
               silence_type: options.params.join(','),
               silence_for: null
             };
-            module.exports.clearSchedule(options, cb);
+            acceptPatientReports.handleReport(options, cb);
         }
     },
     addMessages: function(db, config, doc, callback) {
@@ -297,7 +297,7 @@ module.exports = {
                 return callback(err);
             }
             config.messages.forEach(function(msg) {
-                if (msg.event_type !== 'registration_not_found') {
+                if (!msg.event_type) {
                     messages.addMessage({
                         doc: doc,
                         phone: messages.getRecipientPhone(doc, msg.recipient),
@@ -328,23 +328,6 @@ module.exports = {
                 callback();
             }
         );
-    },
-    clearSchedule: function(options, callback) {
-        var db = options.db,
-            doc = options.doc;
-            
-        utils.getRegistrations({
-            db: db,
-            id: doc.fields && doc.fields.patient_id
-        }, function(err, registrations) {
-            reports.matchRegistrations({
-                db: db,
-                audit: options.audit,
-                doc: doc,
-                registrations: registrations,
-                report: options.report
-            }, callback);
-        });
     },
     setId: function(options, callback) {
         var doc = options.doc,
