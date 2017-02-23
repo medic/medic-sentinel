@@ -277,7 +277,7 @@ module.exports = {
             // Registration forms that clear schedules do so fully
             // silence_type will be split again later, so join them back
             options.report = {
-              silence_type: options.params.join(","),
+              silence_type: options.params.join(','),
               silence_for: null
             };
             module.exports.clearSchedule(options, cb);
