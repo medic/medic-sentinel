@@ -4,6 +4,10 @@ var _ = require('underscore'),
     messages = require('../lib/messages'),
     utils = require('../lib/utils');
 
+var DEFAULT_ID_LENGTH = 5;
+var IDS_TO_GENERATE = 5;
+var currentIdLength = DEFAULT_ID_LENGTH;
+
 module.exports = {
   addRegistrationNotFoundMessage: function(document, reportConfig) {
     var not_found_msg,
@@ -30,19 +34,28 @@ module.exports = {
     }
   },
   addUniqueId: function(db, doc, callback) {
-    var id = ids.generate(doc._id);
+    var potentialIds = _.map(Array(IDS_TO_GENERATE), _.partial(ids.generate, currentIdLength));
 
     utils.getRegistrations({
         db: db,
-        id: id
+        ids: potentialIds
     }, function(err, registrations) {
         if (err) {
-            callback(err);
-        } else if (registrations.length) { // id collision, retry
-            logger.warn('Registration ID ' + id + ' is not unique, retrying...');
+            return callback(err);
+        }
+
+        var uniqueIds = _.reject(potentialIds, function(id) {
+          return _.find(registrations, function(registration) {
+            return registration.key === id;
+          });
+        });
+
+        if (!uniqueIds.length) { // id collision, retry
+            logger.warn('Could not create a unique id of length ' + currentIdLength + ', increasing by one');
+            currentIdLength += 1;
             module.exports.addUniqueId(db, doc, callback);
         } else {
-            doc.patient_id = id;
+            doc.patient_id = uniqueIds[0];
             callback();
         }
     });
