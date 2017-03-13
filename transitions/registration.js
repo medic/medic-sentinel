@@ -182,10 +182,6 @@ module.exports = {
             if (doc.fields && doc.fields.patient_id) {
                 // We're attaching this registration to an existing patient, let's
                 // make sure it's valid
-                // NB: if in the future we allow partners to configure the add_patient
-                //     trigger to support passing in their own patient shortcodes
-                //     we're going to have to change this logic:
-                //     https://github.com/medic/medic-webapp/issues/3000
                 return utils.getPatientContactUuid(db, doc.fields.patient_id, function(err, patientContactId) {
                     if (err) {
                         return callback(err);
@@ -218,10 +214,17 @@ module.exports = {
                     return;
                 }
                 var options = { db: db, audit: audit, doc: doc };
-                if (event.params) {
-                    // params setting get sent as array
+
+                if (typeof event.params === 'string') {
+                    // params setting can get sent as string to convert into an array
                     options.params = event.params.split(',');
+                } else if (typeof event.params === 'object') {
+                    // Or a raw JSON object
+                    options.params = event.params;
+                } else {
+                    options.params = {};
                 }
+
                 series.push(function(cb) {
                     trigger.apply(null, [ options, cb ]);
                 });
@@ -333,14 +336,46 @@ module.exports = {
         var doc = options.doc,
             db = db || options.db;
 
-        transitionUtils.addUniqueId(db, doc, callback);
+        if (options.params.patient_id) {
+            var path = options.params.patient_id.split('.');
+
+            var located;
+            try {
+                located = doc.fields;
+                path.forEach(function(thing) {
+                    located = located[thing];
+                });
+                if (typeof located !== 'string') {
+                    throw new Error('Bad Configured path for providing patient_id');
+                }
+            } catch (error) {
+                // TODO: add validation error
+                return callback();
+            }
+
+            transitionUtils.isIdUnique(db, located, function(isUnique) {
+                if (isUnique) {
+                    doc.patient_id = located;
+                    callback();
+                } else {
+                    // TODO: add validation error
+                    return callback();
+                }
+            });
+        } else {
+            transitionUtils.addUniqueId(db, doc, callback);
+        }
     },
     addPatient: function(options, callback) {
         var doc = options.doc,
             db = options.db,
             audit = options.audit,
             patientShortcode = doc.patient_id,
-            patientNameField = _.first(options.params) || 'patient_name';
+            patientNameField = (
+                Array.isArray(options.params) ?
+                    _.first(options.params) :
+                    options.params.patient_name_field
+            ) || 'patient_name';
 
         utils.getPatientContactUuid(db, patientShortcode, function(err, patientContactId) {
             if (err) {

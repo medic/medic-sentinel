@@ -33,6 +33,20 @@ module.exports = {
       messages.addError(default_msg.doc, default_msg.message);
     }
   },
+  isIdUnique: function(db, id, callback){
+    utils.getRegistrations({
+        db: db,
+        id: id
+    }, function(err, registrations) {
+        if (err) {
+            callback(err);
+        } else if (registrations.length) {
+            callback(false);
+        } else {
+            callback(true);
+        }
+    });
+  },
   addUniqueId: function(db, doc, callback) {
     var potentialIds = _.map(Array(IDS_TO_GENERATE), _.partial(ids.generate, currentIdLength));
 
@@ -59,5 +73,5 @@ module.exports = {
             callback();
         }
     });
-  }
+  },
 };
