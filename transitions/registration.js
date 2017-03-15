@@ -27,6 +27,26 @@ var getRegistrations = function(db, patientId, callback) {
     utils.getRegistrations({ db: db, id: patientId }, callback);
 };
 
+
+var addValidationErrors = function(registrationConfig, doc, errors) {
+    messages.addErrors(doc, errors);
+    // join all errors into one response or respond with first error.
+    if (registrationConfig.validations.join_responses) {
+        var msgs = [];
+        _.each(errors, function(err) {
+            if (err.message) {
+                msgs.push(err.message);
+            } else if (err) {
+                msgs.push(err);
+            }
+        });
+        messages.addReply(doc, msgs.join('  '));
+    } else {
+        var err = _.first(errors);
+        messages.addReply(doc, err.message || err);
+    }
+};
+
 module.exports = {
     filter: function(doc) {
         var self = module.exports,
@@ -150,32 +170,15 @@ module.exports = {
     onMatch: function(change, db, audit, callback) {
         var self = module.exports,
             doc = change.doc,
-            config = self.getRegistrationConfig(self.getConfig(), doc.form);
+            registrationConfig = self.getRegistrationConfig(self.getConfig(), doc.form);
 
-        if (!config) {
+        if (!registrationConfig) {
             return callback();
         }
 
-        self.validate(config, doc, function(errors) {
-
+        self.validate(registrationConfig, doc, function(errors) {
             if (errors && errors.length > 0) {
-                messages.addErrors(doc, errors);
-                // join all errors into one response or respond with first
-                // error.
-                if (config.validations.join_responses) {
-                    var msgs = [];
-                    _.each(errors, function(err) {
-                        if (err.message) {
-                            msgs.push(err.message);
-                        } else if (err) {
-                            msgs.push(err);
-                        }
-                    });
-                    messages.addReply(doc, msgs.join('  '));
-                } else {
-                    var err = _.first(errors);
-                    messages.addReply(doc, err.message || err);
-                }
+                addValidationErrors(registrationConfig, doc, errors, callback);
                 return callback(null, true);
             }
 
@@ -188,15 +191,15 @@ module.exports = {
                     }
 
                     if (!patientContactId) {
-                        transitionUtils.addRegistrationNotFoundMessage(doc, config);
+                        transitionUtils.addRegistrationNotFoundError(doc, registrationConfig);
                         return callback(null, true);
                     }
 
-                    return self.fireConfiguredTriggers(db, audit, config, doc, callback);
+                    return self.fireConfiguredTriggers(db, audit, registrationConfig, doc, callback);
                 });
+            } else {
+                return self.fireConfiguredTriggers(db, audit, registrationConfig, doc, callback);
             }
-
-            return self.fireConfiguredTriggers(db, audit, config, doc, callback);
         });
     },
     fireConfiguredTriggers: function(db, audit, registrationConfig, doc, callback) {
@@ -213,7 +216,7 @@ module.exports = {
                 if (self.isBoolExprFalse(obj, event.bool_expr)) {
                     return;
                 }
-                var options = { db: db, audit: audit, doc: doc };
+                var options = { db: db, audit: audit, doc: doc, registrationConfig: registrationConfig };
 
                 if (typeof event.params === 'string') {
                     // params setting can get sent as string to convert into an array
@@ -231,10 +234,11 @@ module.exports = {
             }
         });
 
-        async.series(series, function(err) {
+        async.series(series, function(err, changed) {
             if (err) {
-                return callback(err);
+                return callback(err, changed);
             }
+
             // add messages is done last so data on doc can be used in
             // messages
             self.addMessages(db, registrationConfig, doc, function() {
@@ -337,20 +341,14 @@ module.exports = {
             db = db || options.db;
 
         if (options.params.patient_id) {
-            var path = options.params.patient_id.split('.');
+            var located = doc.fields[options.params.patient_id];
 
-            var located;
-            try {
-                located = doc.fields;
-                path.forEach(function(thing) {
-                    located = located[thing];
-                });
-                if (typeof located !== 'string') {
-                    throw new Error('Bad Configured path for providing patient_id');
-                }
-            } catch (error) {
-                // TODO: add validation error
-                return callback();
+            if (!located) {
+                transitionUtils.addRejectionMessage(
+                    doc,
+                    options.registrationConfig,
+                    'no_provided_patient_id');
+                return callback(null, true);
             }
 
             transitionUtils.isIdUnique(db, located, function(isUnique) {
@@ -358,8 +356,11 @@ module.exports = {
                     doc.patient_id = located;
                     callback();
                 } else {
-                    // TODO: add validation error
-                    return callback();
+                    transitionUtils.addRejectionMessage(
+                        doc,
+                        options.registrationConfig,
+                        'provided_patient_id_not_unique');
+                    return callback(null, true);
                 }
             });
         } else {

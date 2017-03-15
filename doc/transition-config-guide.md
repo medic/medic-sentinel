@@ -68,23 +68,36 @@ In all three examples below the `registrations` transition is disabled.
 
 ## Specific transition configuration
 
-TODO: fill out for each transition, even if there is no configuration for that transition.
+**TODO:** fill out for each transition, even if there is no configuration for that transition.
 
 ### Generate_Patient_Id_On_Patients
 
-No specific configuration
+No specific configuration.
 
 ### Registration
 
-TODO: Fill this out completely
+Controls patient and schedule registration. Both registers new patients, and new schedules (e.g. a new pregnancy) against existing patients. Creates schedules, as well as creating a document of type `person` with a new (or provided) `person_id` shortcode.
 
-#### Validations
+Config is under the `"registrations"` key, as a list of objects, with keys as described below.
 
-TODO: Fill out all possible validation failures? Do we care about this or is it self-explanatory?
+#### `"form"`
 
-#### Triggers
+The form key, sent in the SMS message, that this configuration should apply to. 
 
-TODO: Fill this out completely
+#### `"events"`
+
+A collection of events that should be applied if against a validated form. Event configuration has the following form:
+
+```json
+{
+  "name": "on_create",
+  "triggers": "add_birth_date",
+  "params": "weeks_since_birth",
+  "bool_expr": "doc.fields.weeks_since_birth"
+}
+```
+
+TODO: Fill out all event types below
 
 ##### add_patient_id
 
@@ -101,3 +114,15 @@ You can also define and object containing multiple different parameters:
     - NB: This field **cannot** be called `patient_id`.
     - NB: This value must be unique among all registered patients in the system.
  - `patient_name`. Same rules as defined above as if it were a single string.
+
+Errors:
+ - If you 
+
+
+#### Validations
+
+##### Join Responses
+
+If `join_responses` is true, all validation errors will be sent as one SMS message. If it is false, **only the first validation error will be sent**.
+
+TODO: Fill out all possible validation failures? Do we care about this or is it self-explanatory?

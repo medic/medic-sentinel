@@ -9,29 +9,39 @@ var IDS_TO_GENERATE = 5;
 var currentIdLength = DEFAULT_ID_LENGTH;
 
 module.exports = {
-  addRegistrationNotFoundMessage: function(document, reportConfig) {
-    var not_found_msg,
-      default_msg = {
-        doc: document,
-        message: 'sys.registration_not_found',
-        phone: messages.getRecipientPhone(document, 'from')
-      };
+  /*
+    Adds a "message" and "error" of the configured key to the report. This
+    indicates something went wrong, and the key indicates what went wrong.
+  */
+  addRejectionMessage: function(document, reportConfig, errorKey) {
+    var foundMessage = {
+      doc: document,
+      // TODO: what should this default front be? Popular options:
+      //       'sys.'
+      //       'messages.generic.'
+      message: 'sys.' + errorKey,
+      phone: messages.getRecipientPhone(document, 'from')
+    };
+
     _.each(reportConfig.messages, function(msg) {
-      if (msg.event_type === 'registration_not_found') {
-        not_found_msg = {
+      if (msg.event_type === errorKey) {
+        foundMessage = {
           doc: document,
           message: messages.getMessage(msg, utils.getLocale(document)),
           phone: messages.getRecipientPhone(document, msg.recipient)
         };
       }
     });
-    if (not_found_msg) {
-      messages.addMessage(not_found_msg);
-      messages.addError(not_found_msg.doc, not_found_msg.message);
-    } else {
-      messages.addMessage(default_msg);
-      messages.addError(default_msg.doc, default_msg.message);
-    }
+
+    // A "message" ends up being a doc.task, which is something that is sent to
+    // the caller via SMS
+    messages.addMessage(foundMessage);
+    // An "error" ends up being a doc.error, which is something that is shown
+    // on the screen when you view the error. We need both
+    messages.addError(foundMessage.doc, foundMessage.message);
+  },
+  addRegistrationNotFoundError: function(document, reportConfig) {
+    module.exports.addRejectionMessage(document, reportConfig, 'registration_not_found');
   },
   isIdUnique: function(db, id, callback){
     utils.getRegistrations({

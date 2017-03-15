@@ -1,5 +1,6 @@
 var sinon = require('sinon'),
     transition = require('../../transitions/registration'),
+    transitionUtils = require('../../transitions/utils'),
     utils = require('../../lib/utils'),
     testUtils = require('../test_utils'),
     schedules = require('../../lib/schedules'),
@@ -10,6 +11,7 @@ exports.tearDown = function(callback) {
     testUtils.restore([
         config.get,
         transition.validate,
+        transitionUtils.isIdUnique,
         utils.getRegistrations,
         utils.getPatientContactUuid,
         utils.getForm,
@@ -134,7 +136,7 @@ exports['add_patient does nothing when patient already added'] = function(test) 
     var audit = { saveDoc: saveDoc };
     var eventConfig = {
         form: 'R',
-        events: [ { name: 'on_create', trigger: 'add_patient' } ]
+        events: [ { name: 'on_create', trigger: 'add_patient_id' } ]
     };
     sinon.stub(config, 'get').returns([ eventConfig ]);
     sinon.stub(transition, 'validate').callsArgWith(2);
@@ -146,14 +148,15 @@ exports['add_patient does nothing when patient already added'] = function(test) 
 
 exports['add_patient uses a given id if configured to'] = function(test) {
     var patientId = '05648';
-    var change = { doc: {
+    var doc = {
         type: 'data_record',
         form: 'R',
         reported_date: 53,
         from: '+555123',
         fields: { patient_name: 'jack', external_id: patientId},
         birth_date: '2017-03-31T01:15:09.000Z'
-    } };
+    };
+    var change = { doc: doc };
     // return expected view results when searching for people_by_phone
     var view = sinon.stub().callsArgWith(3, null, { rows: [ { doc: { parent: { _id: 'papa' } } } ] });
     sinon.stub(utils, 'getPatientContactUuid').callsArgWith(2);
@@ -162,27 +165,35 @@ exports['add_patient uses a given id if configured to'] = function(test) {
     var audit = { saveDoc: saveDoc };
     var eventConfig = {
         form: 'R',
-        events: [ { name: 'on_create', trigger: 'add_patient', params: {patient_id: 'fields.external_id'} } ]
+        events: [ {
+            name: 'on_create',
+            trigger: 'add_patient_id',
+            params: {patient_id: 'external_id'}
+        } ]
     };
     sinon.stub(config, 'get').returns([ eventConfig ]);
     sinon.stub(transition, 'validate').callsArgWith(2);
+    sinon.stub(transitionUtils, 'isIdUnique').callsArgWith(2, true);
 
     transition.onMatch(change, db, audit, function() {
         test.equal(saveDoc.args[0][0].patient_id, patientId);
+        test.equal(doc.patient_id, patientId);
+        test.equal(doc.errors, undefined);
         test.done();
     });
 };
 
 exports['add_patient errors if the configuration doesnt point to an id'] = function(test) {
     var patientId = '05648';
-    var change = { doc: {
+    var doc = {
         type: 'data_record',
         form: 'R',
         reported_date: 53,
         from: '+555123',
         fields: { patient_name: 'jack', external_id: patientId},
         birth_date: '2017-03-31T01:15:09.000Z'
-    } };
+    };
+    var change = { doc: doc };
     // return expected view results when searching for people_by_phone
     var view = sinon.stub().callsArgWith(3, null, { rows: [ { doc: { parent: { _id: 'papa' } } } ] });
     sinon.stub(utils, 'getPatientContactUuid').callsArgWith(2);
@@ -195,22 +206,64 @@ exports['add_patient errors if the configuration doesnt point to an id'] = funct
             name: 'on_create',
             trigger: 'add_patient',
             params: {
-                patient_id: 'fields.not_the_external_id'
+                patient_id: 'not_the_external_id'
             }
         } ]
     };
-    sinon.stub(config, 'get').returns([ eventConfig ]);
+    var configGet = sinon.stub(config, 'get');
+    configGet.withArgs('outgoing_deny_list').returns('');
+    configGet.returns([ eventConfig ]);
+
     sinon.stub(transition, 'validate').callsArgWith(2);
 
     transition.onMatch(change, db, audit, function() {
-        test.equal(saveDoc.args[0][0].patient_id, patientId);
+        test.equal(doc.patient_id, undefined);
+        test.deepEqual(doc.errors, [{message: 'sys.no_provided_patient_id', code: 'invalid_report'}]);
         test.done();
     });
 };
 
-// exports['add_patient errors if the given id is not unique'] = function(test) {
+exports['add_patient errors if the given id is not unique'] = function(test) {
+    var patientId = '05648';
+    var doc = {
+        type: 'data_record',
+        form: 'R',
+        reported_date: 53,
+        from: '+555123',
+        fields: { patient_name: 'jack', external_id: patientId},
+        birth_date: '2017-03-31T01:15:09.000Z'
+    };
+    var change = { doc: doc };
+    // return expected view results when searching for people_by_phone
+    var view = sinon.stub().callsArgWith(3, null, { rows: [ { doc: { parent: { _id: 'papa' } } } ] });
+    sinon.stub(utils, 'getPatientContactUuid').callsArgWith(2);
+    var db = { medic: { view: view } };
+    var saveDoc = sinon.stub().callsArgWith(1);
+    var audit = { saveDoc: saveDoc };
+    var eventConfig = {
+        form: 'R',
+        events: [ {
+            name: 'on_create',
+            trigger: 'add_patient',
+            params: {
+                patient_id: 'external_id'
+            }
+        } ]
+    };
+    var configGet = sinon.stub(config, 'get');
+    configGet.withArgs('outgoing_deny_list').returns('');
+    configGet.returns([ eventConfig ]);
 
-// };
+    sinon.stub(transitionUtils, 'isIdUnique').callsArgWith(2, false);
+
+    sinon.stub(transition, 'validate').callsArgWith(2);
+
+    transition.onMatch(change, db, audit, function() {
+        test.equal(doc.patient_id, undefined);
+        test.deepEqual(doc.errors, [{message: 'sys.provided_patient_id_not_unique', code: 'invalid_report'}]);
+        test.done();
+    });
+};
 
 exports['add_patient event parameter overwrites the default property for the name of the patient'] = function(test) {
     var patientName = 'jack';
