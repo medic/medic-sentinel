@@ -4,7 +4,7 @@ const _ = require('underscore'),
       messages = require('../lib/messages'),
       utils = require('../lib/utils');
 
-const DEFAULT_ID_LENGTH = 4,
+const DEFAULT_ID_LENGTH = 5,
       MAX_IDS_TO_CACHE = 100;
 
 // Developers NB: if you set the cache size too high it will take forever
