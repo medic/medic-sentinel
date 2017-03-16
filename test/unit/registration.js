@@ -168,12 +168,12 @@ exports['add_patient uses a given id if configured to'] = function(test) {
         events: [ {
             name: 'on_create',
             trigger: 'add_patient_id',
-            params: {patient_id: 'external_id'}
+            params: {patient_id_field: 'external_id'}
         } ]
     };
     sinon.stub(config, 'get').returns([ eventConfig ]);
     sinon.stub(transition, 'validate').callsArgWith(2);
-    sinon.stub(transitionUtils, 'isIdUnique').callsArgWith(2, true);
+    sinon.stub(transitionUtils, 'isIdUnique').callsArgWith(2, null, true);
 
     transition.onMatch(change, db, audit, function() {
         test.equal(saveDoc.args[0][0].patient_id, patientId);
@@ -206,7 +206,7 @@ exports['add_patient errors if the configuration doesnt point to an id'] = funct
             name: 'on_create',
             trigger: 'add_patient',
             params: {
-                patient_id: 'not_the_external_id'
+                patient_id_field: 'not_the_external_id'
             }
         } ]
     };
@@ -218,7 +218,7 @@ exports['add_patient errors if the configuration doesnt point to an id'] = funct
 
     transition.onMatch(change, db, audit, function() {
         test.equal(doc.patient_id, undefined);
-        test.deepEqual(doc.errors, [{message: 'sys.no_provided_patient_id', code: 'invalid_report'}]);
+        test.deepEqual(doc.errors, [{message: 'messages.generic.no_provided_patient_id', code: 'invalid_report'}]);
         test.done();
     });
 };
@@ -246,7 +246,7 @@ exports['add_patient errors if the given id is not unique'] = function(test) {
             name: 'on_create',
             trigger: 'add_patient',
             params: {
-                patient_id: 'external_id'
+                patient_id_field: 'external_id'
             }
         } ]
     };
@@ -254,13 +254,13 @@ exports['add_patient errors if the given id is not unique'] = function(test) {
     configGet.withArgs('outgoing_deny_list').returns('');
     configGet.returns([ eventConfig ]);
 
-    sinon.stub(transitionUtils, 'isIdUnique').callsArgWith(2, false);
+    sinon.stub(transitionUtils, 'isIdUnique').callsArgWith(2, null, false);
 
     sinon.stub(transition, 'validate').callsArgWith(2);
 
     transition.onMatch(change, db, audit, function() {
         test.equal(doc.patient_id, undefined);
-        test.deepEqual(doc.errors, [{message: 'sys.provided_patient_id_not_unique', code: 'invalid_report'}]);
+        test.deepEqual(doc.errors, [{message: 'messages.generic.provided_patient_id_not_unique', code: 'invalid_report'}]);
         test.done();
     });
 };

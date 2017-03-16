@@ -16,10 +16,7 @@ module.exports = {
   addRejectionMessage: function(document, reportConfig, errorKey) {
     var foundMessage = {
       doc: document,
-      // TODO: what should this default front be? Popular options:
-      //       'sys.'
-      //       'messages.generic.'
-      message: 'sys.' + errorKey,
+      message: 'messages.generic.' + errorKey,
       phone: messages.getRecipientPhone(document, 'from')
     };
 
@@ -51,9 +48,9 @@ module.exports = {
         if (err) {
             callback(err);
         } else if (registrations.length) {
-            callback(false);
+            callback(null, false);
         } else {
-            callback(true);
+            callback(null, true);
         }
     });
   },

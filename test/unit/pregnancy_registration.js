@@ -240,7 +240,7 @@ exports['pregnancies on existing patients fail without valid patient id'] = func
         test.equals(err, null);
         test.equals(changed, true);
         test.equals(doc.errors.length, 1);
-        test.equals(doc.errors[0].message, 'sys.registration_not_found');
+        test.equals(doc.errors[0].message, 'messages.generic.registration_not_found');
         test.done();
     });
 };

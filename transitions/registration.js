@@ -47,6 +47,18 @@ var addValidationErrors = function(registrationConfig, doc, errors) {
     }
 };
 
+var getPatientNameField = function(params) {
+    if (Array.isArray(params) && params.length && params[0]) {
+        return params[0];
+    }
+
+    if (params && params.patient_name_field) {
+        return params.patient_name_field;
+    }
+
+    return 'patient_name';
+};
+
 module.exports = {
     filter: function(doc) {
         var self = module.exports,
@@ -340,10 +352,10 @@ module.exports = {
         var doc = options.doc,
             db = db || options.db;
 
-        if (options.params.patient_id) {
-            var located = doc.fields[options.params.patient_id];
+        if (options.params.patient_id_field) {
+            var providedId = doc.fields[options.params.patient_id_field];
 
-            if (!located) {
+            if (!providedId) {
                 transitionUtils.addRejectionMessage(
                     doc,
                     options.registrationConfig,
@@ -351,17 +363,21 @@ module.exports = {
                 return callback(null, true);
             }
 
-            transitionUtils.isIdUnique(db, located, function(isUnique) {
-                if (isUnique) {
-                    doc.patient_id = located;
-                    callback();
-                } else {
-                    transitionUtils.addRejectionMessage(
-                        doc,
-                        options.registrationConfig,
-                        'provided_patient_id_not_unique');
-                    return callback(null, true);
+            transitionUtils.isIdUnique(db, providedId, function(err, isUnique) {
+                if (err) {
+                    return callback(err);
                 }
+
+                if (isUnique) {
+                    doc.patient_id = providedId;
+                    return callback();
+                }
+
+                transitionUtils.addRejectionMessage(
+                    doc,
+                    options.registrationConfig,
+                    'provided_patient_id_not_unique');
+                callback(null, true);
             });
         } else {
             transitionUtils.addUniqueId(db, doc, callback);
@@ -372,11 +388,7 @@ module.exports = {
             db = options.db,
             audit = options.audit,
             patientShortcode = doc.patient_id,
-            patientNameField = (
-                Array.isArray(options.params) ?
-                    _.first(options.params) :
-                    options.params.patient_name_field
-            ) || 'patient_name';
+            patientNameField = getPatientNameField(options.params);
 
         utils.getPatientContactUuid(db, patientShortcode, function(err, patientContactId) {
             if (err) {
