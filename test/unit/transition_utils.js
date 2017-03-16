@@ -1,27 +1,40 @@
-var sinon = require('sinon'),
-    utils = require('../../lib/utils'),
-    testUtils = require('../test_utils'),
-    ids = require('../../lib/ids');
+const sinon = require('sinon'),
+      testUtils = require('../test_utils');
 
-var transitionUtils = require('../../transitions/utils.js');
+const transitionUtils = require('../../transitions/utils.js');
 
+const mockDb = (idFilterLogicFn) => {
+  return { medic: { view: sinon.spy((db, view, options, callback) => {
 
-exports.tearDown = function(callback) {
+    const ids = options.keys.slice(0);
+
+    const toReturn = {
+      rows: idFilterLogicFn(ids).map(id => {return {key: id};})
+    };
+
+    callback(null, toReturn);
+  })}};
+};
+
+exports.tearDown = callback => {
     testUtils.restore([
-        utils.getRegistrations,
-        ids.generate
     ]);
+
+    transitionUtils._clearCache();
 
     callback();
 };
 
-module.exports['addUniqueId sets an id onto a doc'] = function(test) {
-  sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, []);
-  sinon.stub(ids, 'generate').returns(12345);
+module.exports['addUniqueId sets an id onto a doc'] = test => {
+  const doc = {};
 
-  var doc = {};
+  let potentialIds;
+  const db = mockDb((ids) => {
+    potentialIds = ids;
+    return [];
+  });
 
-  transitionUtils.addUniqueId({}, doc, function(err, result) {
+  transitionUtils.addUniqueId(db, doc, (err, result) => {
     if (err) {
       test.fail('addUniqueId shouldnt error');
     }
@@ -29,20 +42,47 @@ module.exports['addUniqueId sets an id onto a doc'] = function(test) {
       test.fail('addUniqueId shouldnt return a result, it should set a value on the passed doc');
     }
 
-    test.equal(doc.patient_id, 12345);
+    test.ok(doc.patient_id, 'patient_id should be set');
+    test.ok(potentialIds.includes(doc.patient_id), 'patient_id should come from the generated ids');
+    test.done();
+  });
+};
+
+module.exports['addUniqueId doesnt use ids that are already used by the DB'] = test => {
+  const doc = {};
+
+  let idToUse;
+  const db = mockDb(ids => {
+    idToUse = ids.pop();
+    return ids;
+  });
+
+  transitionUtils.addUniqueId(db, doc, (err, result) => {
+    if (err) {
+      test.fail('addUniqueId shouldnt error');
+    }
+    if (result) {
+      test.fail('addUniqueId shouldnt return a result, it should set a value on the passed doc');
+    }
+
+    test.equal(doc.patient_id, idToUse);
     test.done();
   });
 };
 
 module.exports['addUniqueId retries with a longer id if it only generates duplicates'] = function(test) {
-  sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, [{key: 12345}]);
-  var generate = sinon.stub(ids, 'generate');
-  generate.withArgs(5).returns(12345);
-  generate.withArgs(6).returns(123456);
+  const doc = {};
 
-  var doc = {};
+  let potentialIds;
+  const db = mockDb(ids => {
+    if (ids[0].length === 4) {
+      return ids;
+    }
+    potentialIds = ids;
+    return [];
+  });
 
-  transitionUtils.addUniqueId({}, doc, function(err, result) {
+  transitionUtils.addUniqueId(db, doc, (err, result) => {
     if (err) {
       test.fail('addUniqueId shouldnt error');
     }
@@ -50,7 +90,9 @@ module.exports['addUniqueId retries with a longer id if it only generates duplic
       test.fail('addUniqueId shouldnt return a result, it should set a value on the passed doc');
     }
 
-    test.equal(doc.patient_id, 123456);
+    test.ok(doc.patient_id, 'patient_id should be set');
+    test.equal(doc.patient_id.length, 5);
+    test.ok(potentialIds.includes(doc.patient_id), 'patient_id should come from the generated ids');
     test.done();
   });
 };
