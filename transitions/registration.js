@@ -20,6 +20,13 @@ var findFirstDefinedValue = function(doc, fields) {
     return definedField && doc.fields[definedField];
 };
 
+var getRegistrations = function(db, patientId, callback) {
+    if (!patientId) {
+        return callback();
+    }
+    utils.getRegistrations({ db: db, id: patientId }, callback);
+};
+
 var addValidationErrors = function(registrationConfig, doc, errors) {
     messages.addErrors(doc, errors);
     // join all errors into one response or respond with first error.
@@ -303,8 +310,7 @@ module.exports = {
         if (!config.messages || !config.messages.length) {
             return callback();
         }
-        // TODO: can patientId be empty here?
-        utils.getRegistrations({ db: db, id: patientId }, function(err, registrations) {
+        getRegistrations(db, patientId, function(err, registrations) {
             if (err) {
                 return callback(err);
             }
@@ -323,11 +329,10 @@ module.exports = {
         });
     },
     assignSchedule: function(options, callback) {
-        // TODO: can patientId be empty here?
-        utils.getRegistrations({
-            db: options.db,
-            id: options.doc.fields && options.doc.fields.patient_id,
-            }, function(err, registrations) {
+        getRegistrations(
+            options.db,
+            options.doc.fields && options.doc.fields.patient_id,
+            function(err, registrations) {
                 if (err) {
                     return callback(err);
                 }
