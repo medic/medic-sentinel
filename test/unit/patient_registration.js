@@ -4,7 +4,6 @@ var _ = require('underscore'),
     sinon = require('sinon'),
     utils = require('../../lib/utils'),
     testUtils = require('../test_utils'),
-    // ids = require('../../lib/ids'),
     transitionUtils = require('../../transitions/utils'),
     date = require('../../date');
 

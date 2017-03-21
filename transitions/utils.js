@@ -51,13 +51,10 @@ module.exports = {
     });
   },
   addUniqueId: function(db, doc, callback) {
-    console.log('addUniqueId');
     idGenerator.next().value.then(patientId => {
-      console.log('gotPatientId', patientId);
       doc.patient_id = patientId;
       callback();
     }).catch(err => {
-      console.log('poop happened', err);
       callback(err);
     });
   }
