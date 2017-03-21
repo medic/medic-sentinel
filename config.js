@@ -36,6 +36,7 @@ const initFeed = function() {
           console.error('Error loading configuration. Exiting...');
           process.exit(0);
         }
+        require('./transitions').loadTransitions();
       });
     } else if (change.id.indexOf('messages-') === 0) {
       logger.info('Detected translations change - reloading');
