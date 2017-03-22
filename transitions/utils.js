@@ -54,8 +54,6 @@ module.exports = {
     idGenerator.next().value.then(patientId => {
       doc.patient_id = patientId;
       callback();
-    }).catch(err => {
-      callback(err);
-    });
+    }).catch(callback);
   }
 };

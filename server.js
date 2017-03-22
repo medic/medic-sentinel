@@ -20,7 +20,7 @@ if (Number(version[1] <= 4)) {
   throw new Error('Node version ' + process.version + ' is not supported');
 }
 if (Number(version[1]) < 6 && Number(version[2]) < 10) {
-  console.error('This node version may not be supported');
+  logger.warn('This node version may not be supported');
 }
 
 config.init(function(err) {
