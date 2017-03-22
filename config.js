@@ -8,37 +8,35 @@ const _ = require('underscore'),
 
 let config = require('./defaults');
 
-const loadTranslations = function() {
+const loadTranslations = () => {
   const options = {
     startkey: [ 'translations', false ],
     endkey: [ 'translations', true ],
     include_docs: true
   };
-  db.medic.view('medic-client', 'doc_by_type', options, function(err, result) {
+  db.medic.view('medic-client', 'doc_by_type', options, (err, result) => {
     if (err) {
       logger.error('Error loading translations - starting up anyway', err);
       return;
     }
-    result.rows.forEach(function(row) {
-      translations[row.doc.code] = row.doc.values;
-    });
+    result.rows.forEach(row => translations[row.doc.code] = row.doc.values );
   });
 };
 
-const initFeed = function() {
+const initFeed = () => {
   // Use since=now on ddoc listener so we don't replay an old change.
   const feed = new follow.Feed({ db: process.env.COUCH_URL, since: 'now' });
-  feed.on('change', function(change) {
+  feed.on('change', change => {
     if (change.id === '_design/medic') {
       logger.info('Reloading configuration');
-      initConfig(function(err) {
+      initConfig(err => {
         if (err) {
           console.error('Error loading configuration. Exiting...');
           process.exit(0);
         }
         require('./transitions').loadTransitions();
       });
-    } else if (change.id.indexOf('messages-') === 0) {
+    } else if (change.id.startsWith('messages-')) {
       logger.info('Detected translations change - reloading');
       loadTranslations();
     }
@@ -46,8 +44,8 @@ const initFeed = function() {
   feed.follow();
 };
 
-const initConfig = function(callback) {
-  db.medic.get(SETTINGS_PATH, function(err, data) {
+const initConfig = callback => {
+  db.medic.get(SETTINGS_PATH, (err, data) => {
     if (err) {
       return callback(err);
     }
@@ -67,13 +65,13 @@ const initConfig = function(callback) {
 module.exports = {
   _initConfig: initConfig,
   _initFeed: initFeed,
-  get: function(key) {
+  get: key => {
     return config[key];
   },
-  getTranslations: function() {
+  getTranslations: () => {
     return translations;
   },
-  init: function(callback) {
+  init: callback => {
     initFeed();
     loadTranslations();
     initConfig(callback);
