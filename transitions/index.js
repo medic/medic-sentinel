@@ -30,7 +30,7 @@ var AVAILABLE_TRANSITIONS = [
     'update_notifications',
     'update_scheduled_reports',
     'update_sent_forms',
-    'generate_patient_id_on_patients'
+    'generate_patient_id_on_people'
 ];
 
 var processed = 0;
@@ -362,8 +362,8 @@ var attach = function() {
 
 module.exports = {
     _loadTransition: loadTransition,
-    _loadTransitions: loadTransitions,
     _changeQueue: changeQueue,
+    loadTransitions: loadTransitions,
     canRun: canRun,
     attach: attach,
     finalize: finalize,
