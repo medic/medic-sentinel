@@ -168,7 +168,7 @@ exports['add_patient uses a given id if configured to'] = function(test) {
         events: [ {
             name: 'on_create',
             trigger: 'add_patient_id',
-            params: {patient_id_field: 'external_id'}
+            params: '{"patient_id_field": "external_id"}'
         } ]
     };
     sinon.stub(config, 'get').returns([ eventConfig ]);
@@ -205,9 +205,7 @@ exports['add_patient errors if the configuration doesnt point to an id'] = funct
         events: [ {
             name: 'on_create',
             trigger: 'add_patient',
-            params: {
-                patient_id_field: 'not_the_external_id'
-            }
+            params: '{"patient_id_field": "not_the_external_id"}'
         } ]
     };
     var configGet = sinon.stub(config, 'get');
@@ -245,9 +243,7 @@ exports['add_patient errors if the given id is not unique'] = function(test) {
         events: [ {
             name: 'on_create',
             trigger: 'add_patient',
-            params: {
-                patient_id_field: 'external_id'
-            }
+            params: '{"patient_id_field": "external_id"}'
         } ]
     };
     var configGet = sinon.stub(config, 'get');
@@ -288,6 +284,42 @@ exports['add_patient event parameter overwrites the default property for the nam
     var eventConfig = {
         form: 'R',
         events: [ { name: 'on_create', trigger: 'add_patient', params: 'name' } ]
+    };
+    sinon.stub(config, 'get').returns([ eventConfig ]);
+    sinon.stub(transition, 'validate').callsArgWith(2);
+    sinon.stub(ids, 'generate').returns(patientId);
+    sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, []);
+
+    transition.onMatch(change, db, audit, function() {
+        test.equals(saveDoc.callCount, 1);
+        test.equals(saveDoc.args[0][0].name, patientName);
+        test.done();
+    });
+};
+
+exports['add_patient event parameter overwrites the default property for the name of the patient using JSON config'] = function(test) {
+    var patientName = 'jack';
+    var submitterId = 'papa';
+    var patientId = '05649';
+    var senderPhoneNumber = '+555123';
+    var dob = '2017-03-31T01:15:09.000Z';
+    var change = { doc: {
+        type: 'data_record',
+        form: 'R',
+        reported_date: 53,
+        from: senderPhoneNumber,
+        fields: { name: patientName },
+        birth_date: dob
+    } };
+    // return expected view results when searching for people_by_phone
+    var view = sinon.stub().callsArgWith(3, null, { rows: [ { doc: { parent: { _id: submitterId } } } ] });
+    sinon.stub(utils, 'getPatientContactUuid').callsArgWith(2);
+    var db = { medic: { view: view } };
+    var saveDoc = sinon.stub().callsArgWith(1);
+    var audit = { saveDoc: saveDoc };
+    var eventConfig = {
+        form: 'R',
+        events: [ { name: 'on_create', trigger: 'add_patient', params: '{"patient_name_field": "name"}' } ]
     };
     sinon.stub(config, 'get').returns([ eventConfig ]);
     sinon.stub(transition, 'validate').callsArgWith(2);
