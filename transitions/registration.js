@@ -230,14 +230,15 @@ module.exports = {
                 }
                 var options = { db: db, audit: audit, doc: doc, registrationConfig: registrationConfig };
 
-                if (typeof event.params === 'string') {
-                    // params setting can get sent as string to convert into an array
-                    options.params = event.params.split(',');
-                } else if (typeof event.params === 'object') {
-                    // Or a raw JSON object
-                    options.params = event.params;
-                } else {
+
+                if (!event.params) {
                     options.params = {};
+                } else {
+                    try {
+                        options.params = JSON.parse(event.params);
+                    } catch (e) {
+                        options.params = event.params.split(',');
+                    }
                 }
 
                 series.push(function(cb) {
@@ -352,7 +353,11 @@ module.exports = {
         var doc = options.doc,
             db = db || options.db;
 
-        if (options.params.patient_id_field) {
+        var patientIdField = options.params.patient_id_field;
+
+        if (patientIdField === 'patient_id') {
+            callback(new Error('Configuration Error: patient_id_field cannot be patient_id'));
+        } else if (patientIdField) {
             var providedId = doc.fields[options.params.patient_id_field];
 
             if (!providedId) {
