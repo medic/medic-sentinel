@@ -1,9 +1,10 @@
 const _ = require('underscore'),
+      db = require('../db'),
       ids = require('../lib/ids'),
       messages = require('../lib/messages'),
       utils = require('../lib/utils');
 
-let idGenerator = ids.generator();
+let idGenerator = ids.generator(db);
 
 module.exports = {
   /*
