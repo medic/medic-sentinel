@@ -27,7 +27,6 @@ var getRegistrations = function(db, patientId, callback) {
     utils.getRegistrations({ db: db, id: patientId }, callback);
 };
 
-
 var addValidationErrors = function(registrationConfig, doc, errors) {
     messages.addErrors(doc, errors);
     // join all errors into one response or respond with first error.

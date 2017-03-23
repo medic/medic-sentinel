@@ -4,21 +4,20 @@ var sinon = require('sinon'),
     utils = require('../../lib/utils'),
     testUtils = require('../test_utils'),
     schedules = require('../../lib/schedules'),
-    config = require('../../config'),
-    ids = require('../../lib/ids');
+    config = require('../../config');
 
 exports.tearDown = function(callback) {
     testUtils.restore([
         config.get,
         transition.validate,
         transitionUtils.isIdUnique,
+        transitionUtils.addUniqueId,
         utils.getRegistrations,
         utils.getPatientContactUuid,
         utils.getForm,
         utils.getClinicPhone,
         schedules.getScheduleConfig,
-        schedules.assignSchedule,
-        ids.generate
+        schedules.assignSchedule
     ]);
     callback();
 };
@@ -99,8 +98,11 @@ exports['add_patient trigger creates a new patient'] = function(test) {
     };
     sinon.stub(config, 'get').returns([ eventConfig ]);
     sinon.stub(transition, 'validate').callsArgWith(2);
-    sinon.stub(ids, 'generate').returns(patientId);
     sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, []);
+    sinon.stub(transitionUtils, 'addUniqueId', (db, doc, callback) => {
+        doc.patient_id = patientId;
+        callback();
+    });
 
     transition.onMatch(change, db, audit, function() {
         test.equal(getPatientContactUuid.callCount, 1);
@@ -287,8 +289,12 @@ exports['add_patient event parameter overwrites the default property for the nam
     };
     sinon.stub(config, 'get').returns([ eventConfig ]);
     sinon.stub(transition, 'validate').callsArgWith(2);
-    sinon.stub(ids, 'generate').returns(patientId);
     sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, []);
+
+    sinon.stub(transitionUtils, 'addUniqueId', (db, doc, callback) => {
+        doc.patient_id = patientId;
+        callback();
+    });
 
     transition.onMatch(change, db, audit, function() {
         test.equals(saveDoc.callCount, 1);
@@ -362,13 +368,16 @@ exports['add_patient and add_patient_id triggers are idempotent'] = function(tes
     };
     sinon.stub(config, 'get').returns([ eventConfig ]);
     sinon.stub(transition, 'validate').callsArgWith(2);
-    var idsGenerate = sinon.stub(ids, 'generate').returns(patientId);
     sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, []);
+
+    sinon.stub(transitionUtils, 'addUniqueId', (db, doc, callback) => {
+        doc.patient_id = patientId;
+        callback();
+    });
 
     transition.onMatch(change, db, audit, function() {
         test.equals(saveDoc.callCount, 1);
         test.equals(saveDoc.args[0][0].name, patientName);
-        test.equal(idsGenerate.callCount, 5);
         test.done();
     });
 };

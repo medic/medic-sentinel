@@ -1,12 +1,9 @@
-var _ = require('underscore'),
-    ids = require('../lib/ids'),
-    logger = require('../lib/logger'),
-    messages = require('../lib/messages'),
-    utils = require('../lib/utils');
+const _ = require('underscore'),
+      ids = require('../lib/ids'),
+      messages = require('../lib/messages'),
+      utils = require('../lib/utils');
 
-var DEFAULT_ID_LENGTH = 5;
-var IDS_TO_GENERATE = 5;
-var currentIdLength = DEFAULT_ID_LENGTH;
+let idGenerator = ids.generator();
 
 module.exports = {
   /*
@@ -41,44 +38,22 @@ module.exports = {
     module.exports.addRejectionMessage(document, reportConfig, 'registration_not_found');
   },
   isIdUnique: function(db, id, callback){
-    utils.getRegistrations({
-        db: db,
-        id: id
-    }, function(err, registrations) {
-        if (err) {
-            callback(err);
-        } else if (registrations.length) {
-            callback(null, false);
-        } else {
-            callback(null, true);
-        }
+    db.medic.view('medic', 'registered_patients', {
+      key: id
+    }, (err, registrations) => {
+      if (err) {
+          callback(err);
+      } else if (registrations.length) {
+          callback(null, false);
+      } else {
+          callback(null, true);
+      }
     });
   },
   addUniqueId: function(db, doc, callback) {
-    var potentialIds = _.map(Array(IDS_TO_GENERATE), _.partial(ids.generate, currentIdLength));
-
-    utils.getRegistrations({
-        db: db,
-        ids: potentialIds
-    }, function(err, registrations) {
-        if (err) {
-            return callback(err);
-        }
-
-        var uniqueIds = _.reject(potentialIds, function(id) {
-          return _.find(registrations, function(registration) {
-            return registration.key === id;
-          });
-        });
-
-        if (!uniqueIds.length) { // id collision, retry
-            logger.warn('Could not create a unique id of length ' + currentIdLength + ', increasing by one');
-            currentIdLength += 1;
-            module.exports.addUniqueId(db, doc, callback);
-        } else {
-            doc.patient_id = uniqueIds[0];
-            callback();
-        }
-    });
+    idGenerator.next().value.then(patientId => {
+      doc.patient_id = patientId;
+      callback();
+    }).catch(callback);
   }
 };
