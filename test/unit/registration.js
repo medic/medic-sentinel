@@ -329,8 +329,12 @@ exports['add_patient event parameter overwrites the default property for the nam
     };
     sinon.stub(config, 'get').returns([ eventConfig ]);
     sinon.stub(transition, 'validate').callsArgWith(2);
-    sinon.stub(ids, 'generate').returns(patientId);
     sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, []);
+
+    sinon.stub(transitionUtils, 'addUniqueId', (db, doc, callback) => {
+        doc.patient_id = patientId;
+        callback();
+    });
 
     transition.onMatch(change, db, audit, function() {
         test.equals(saveDoc.callCount, 1);
