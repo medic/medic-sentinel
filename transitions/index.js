@@ -1,4 +1,4 @@
-/*
+*
  * Transitions runner.  Set up the changes listener and apply each transition
  * serially to a change.
  */
@@ -318,7 +318,7 @@ var getProcessedSeq = function(callback) {
 var updateMetaData = function(seq, callback) {
     getMetaData(function(err, metaData) {
         if (err) {
-            logger.error('Error updating metaData', err);
+            logger.error('Error fetching metaData for update', err);
             return callback();
         }
         metaData.processed_seq = seq;
