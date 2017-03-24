@@ -354,8 +354,9 @@ var attach = function() {
         feed.on('change', function(change) {
             // skip uninteresting documents
             if (change.deleted ||
-                change.id.match(/^_design\//) ||
-                change.id === METADATA_DOCUMENT) {
+                    change.id.match(/^_design\//) ||
+                    change.id === METADATA_DOCUMENT) {
+
                 return;
             }
             changeQueue.push(change);
