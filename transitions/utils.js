@@ -41,10 +41,10 @@ module.exports = {
   isIdUnique: function(db, id, callback){
     db.medic.view('medic', 'registered_patients', {
       key: id
-    }, (err, registrations) => {
+    }, (err, results) => {
       if (err) {
           callback(err);
-      } else if (registrations.length) {
+      } else if (results.rows.length) {
           callback(null, false);
       } else {
           callback(null, true);

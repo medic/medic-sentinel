@@ -240,6 +240,10 @@ module.exports = {
                     }
                 }
 
+                logger.debug('Parsed params for form', options.form,
+                    'trigger', event.trigger,
+                    ':', options.params);
+
                 series.push(function(cb) {
                     trigger.apply(null, [ options, cb ]);
                 });
