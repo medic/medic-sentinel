@@ -498,3 +498,85 @@ exports['filter returns true for xforms reports'] = function(test) {
     test.equals(actual, true);
     test.done();
 };
+
+exports['trigger param configuration supports strings'] = function (test) {
+    var eventConfig = {
+        form: 'R',
+        events: [ { name: 'on_create', trigger: 'testparamparsing', params: 'foo' } ]
+    };
+
+    transition.triggers.testparamparsing = function(options, cb) {
+        cb(options);
+    };
+
+    transition.fireConfiguredTriggers({}, {}, eventConfig, {}, function(options) {
+        test.deepEqual(options.params, ['foo']);
+
+        test.done();
+    });
+};
+
+exports['trigger param configuration supports comma-delimited strings as array'] = function (test) {
+    var eventConfig = {
+        form: 'R',
+        events: [ { name: 'on_create', trigger: 'testparamparsing', params: 'foo,bar' } ]
+    };
+
+    transition.triggers.testparamparsing = function(options, cb) {
+        cb(options);
+    };
+
+    transition.fireConfiguredTriggers({}, {}, eventConfig, {}, function(options) {
+        test.deepEqual(options.params, ['foo', 'bar']);
+
+        test.done();
+    });
+};
+
+exports['trigger param configuration supports arrays as a string'] = function (test) {
+    var eventConfig = {
+        form: 'R',
+        events: [ { name: 'on_create', trigger: 'testparamparsing', params: '["foo","bar", 3]' } ]
+    };
+
+    transition.triggers.testparamparsing = function(options, cb) {
+        cb(options);
+    };
+
+    transition.fireConfiguredTriggers({}, {}, eventConfig, {}, function(options) {
+        test.deepEqual(options.params, ['foo', 'bar', 3]);
+
+        test.done();
+    });
+};
+
+exports['trigger param configuration supports JSON as a string'] = function (test) {
+    var eventConfig = {
+        form: 'R',
+        events: [ { name: 'on_create', trigger: 'testparamparsing', params: '{"foo": "bar"}' } ]
+    };
+
+    transition.triggers.testparamparsing = function(options, cb) {
+        cb(options);
+    };
+
+    transition.fireConfiguredTriggers({}, {}, eventConfig, {}, function(options) {
+        test.deepEqual(options.params, {foo: 'bar'});
+
+        test.done();
+    });
+};
+
+exports['trigger param configuration parse failure propagates to the callbacks'] = function (test) {
+    var eventConfig = {
+        form: 'R',
+        //                                                                  actual JSON not allowed!
+        events: [ { name: 'on_create', trigger: 'testparamparsing', params: {foo: 'bar'} } ]
+    };
+
+    transition.fireConfiguredTriggers({}, {}, eventConfig, {}, function(err) {
+        test.ok(err instanceof Error);
+
+        test.done();
+    });
+};
