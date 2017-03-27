@@ -218,36 +218,44 @@ module.exports = {
             series = [];
 
         _.each(registrationConfig.events, function(event) {
-            var trigger = self.triggers[event.trigger];
-            if (!trigger) {
-                return;
-            }
-            if (event.name === 'on_create') {
-                var obj = _.defaults({}, doc, doc.fields);
-                if (self.isBoolExprFalse(obj, event.bool_expr)) {
-                    return;
+            series.push(function(cb) {
+                var trigger = self.triggers[event.trigger];
+                if (!trigger) {
+                    return cb();
                 }
-                var options = { db: db, audit: audit, doc: doc, registrationConfig: registrationConfig };
-
-
-                if (!event.params) {
-                    options.params = {};
-                } else {
-                    try {
-                        options.params = JSON.parse(event.params);
-                    } catch (e) {
-                        options.params = event.params.split(',');
+                if (event.name === 'on_create') {
+                    var obj = _.defaults({}, doc, doc.fields);
+                    if (self.isBoolExprFalse(obj, event.bool_expr)) {
+                        return cb();
                     }
-                }
+                    var options = { db: db, audit: audit, doc: doc, registrationConfig: registrationConfig };
 
-                logger.debug('Parsed params for form', options.form,
-                    'trigger', event.trigger,
-                    ':', options.params);
 
-                series.push(function(cb) {
+                    if (!event.params) {
+                        options.params = {};
+                    } else {
+                        // We currently support JSON in a string:
+                        // "{\"foo\": \"bar\"}"
+                        // And comma delimted strings:
+                        // "foo,bar" or just "foo"
+                        try {
+                            options.params = JSON.parse(event.params);
+                        } catch (e) {
+                            try {
+                                options.params = event.params.split(',');
+                            } catch (e) {
+                                return cb(new Error('event params cannot be parsed: must be either a comma-delimited String, or JSON *inside* a String'));
+                            }
+                        }
+                    }
+
+                    logger.debug('Parsed params for form', options.form,
+                        'trigger', event.trigger,
+                        ':', options.params);
+
                     trigger.apply(null, [ options, cb ]);
-                });
-            }
+                }
+            });
         });
 
         async.series(series, function(err, changed) {
