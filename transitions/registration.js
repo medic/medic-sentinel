@@ -234,17 +234,29 @@ module.exports = {
                     if (!event.params) {
                         options.params = {};
                     } else {
-                        // We currently support JSON in a string:
-                        // "{\"foo\": \"bar\"}"
-                        // And comma delimted strings:
-                        // "foo,bar" or just "foo"
-                        try {
-                            options.params = JSON.parse(event.params);
-                        } catch (e) {
+                        if (event.params instanceof Object) {
+                            // We support raw JSON even if we can't specify that
+                            // correctly in kanso.json
+                            options.params = event.params;
+                        } else {
                             try {
-                                options.params = event.params.split(',');
-                            } catch (e) {
-                                return cb(new Error('event params cannot be parsed: must be either a comma-delimited String, or JSON *inside* a String'));
+                                // We currently support JSON in a string:
+                                // "{\"foo\": \"bar\"}"
+                                // And comma delimted strings:
+                                // "foo,bar" or just "foo"
+                                switch (event.params.trim()[0]) {
+                                    case '[':
+                                    case '{':
+                                        options.params = JSON.parse(event.params);
+                                        break;
+                                    default:
+                                        options.params = event.params.split(',');
+
+                                }
+                            } catch (error) {
+                                return cb(new Error(
+        `Unable to parse params for ${registrationConfig.form}.${event.trigger}: ${event.params}
+        Error: ${error}`));
                             }
                         }
                     }

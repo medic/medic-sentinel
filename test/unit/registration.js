@@ -567,11 +567,32 @@ exports['trigger param configuration supports JSON as a string'] = function (tes
     });
 };
 
-exports['trigger param configuration parse failure propagates to the callbacks'] = function (test) {
+exports['trigger param configuration supports direct JSON'] = function (test) {
     var eventConfig = {
         form: 'R',
-        //                                                                  actual JSON not allowed!
         events: [ { name: 'on_create', trigger: 'testparamparsing', params: {foo: 'bar'} } ]
+    };
+
+    transition.triggers.testparamparsing = function(options, cb) {
+        cb(options);
+    };
+
+    transition.fireConfiguredTriggers({}, {}, eventConfig, {}, function(options) {
+        test.deepEqual(options.params, {foo: 'bar'});
+
+        test.done();
+    });
+};
+
+exports['trigger param configuration parse failure for invalid JSON propagates to the callbacks'] = function (test) {
+    var eventConfig = {
+        form: 'R',
+        //                                                                                v missing end }
+        events: [ { name: 'on_create', trigger: 'testparamparsing', params: '{"foo": "bar"' } ]
+    };
+
+    transition.triggers.testparamparsing = function(options, cb) {
+        cb(options);
     };
 
     transition.fireConfiguredTriggers({}, {}, eventConfig, {}, function(err) {
