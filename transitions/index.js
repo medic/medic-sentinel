@@ -53,7 +53,7 @@ const AVAILABLE_TRANSITIONS = [
  * expectations, not just because you think most will want them to run.
  */
 const SYSTEM_TRANSITIONS = [
-  'maintain_info_document'
+  // 'maintain_info_document'
 ];
 
 // Init assertion that all SYSTEM_TRANSITIONS are also in AVAILABLE_TRANSITIONS

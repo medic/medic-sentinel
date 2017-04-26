@@ -174,25 +174,25 @@ exports['loadTransitions loads configured transitions'] = test => {
     test.done();
 };
 
-exports['loadTransitions loads system transitions by default'] = test => {
-    sinon.stub(config, 'get').returns({});
-    var stub = sinon.stub(transitions, '_loadTransition');
-    transitions.loadTransitions();
-    test.equal(stub.calledWith('maintain_info_document'), true);
-    stub.restore();
-    config.get.restore();
-    test.done();
-};
+// exports['loadTransitions loads system transitions by default'] = test => {
+//     sinon.stub(config, 'get').returns({});
+//     var stub = sinon.stub(transitions, '_loadTransition');
+//     transitions.loadTransitions();
+//     test.equal(stub.calledWith('maintain_info_document'), true);
+//     stub.restore();
+//     config.get.restore();
+//     test.done();
+// };
 
-exports['loadTransitions doesnt load system transistions that have been explicitly disabled'] = test => {
-    sinon.stub(config, 'get').returns({maintain_info_document: {disable: true}});
-    var stub = sinon.stub(transitions, '_loadTransition');
-    transitions.loadTransitions();
-    test.equal(stub.calledWith('maintain_info_document'), false);
-    stub.restore();
-    config.get.restore();
-    test.done();
-};
+// exports['loadTransitions doesnt load system transistions that have been explicitly disabled'] = test => {
+//     sinon.stub(config, 'get').returns({maintain_info_document: {disable: true}});
+//     var stub = sinon.stub(transitions, '_loadTransition');
+//     transitions.loadTransitions();
+//     test.equal(stub.calledWith('maintain_info_document'), false);
+//     stub.restore();
+//     config.get.restore();
+//     test.done();
+// };
 
 exports['attach handles missing meta data doc'] = function(test) {
     var get = sinon.stub(db.medic, 'get');
