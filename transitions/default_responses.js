@@ -81,33 +81,33 @@ module.exports = {
     _getLocale: function(doc) {
         return utils.getLocale(doc);
     },
-    _translate: function(key, locale) {
-        return utils.translate(key, locale);
-    },
-    _addMessage: function(doc, msg) {
-        var opts = {
-                doc: doc,
-                phone: doc.from,
-                message: msg
-            };
-        messages.addMessage(opts);
+    _addMessage: function(doc, key) {
+        return messages.addMessage({
+            doc: doc,
+            phone: doc.from,
+            message: utils.translate(key, module.exports._getLocale(doc))
+        });
     },
     onMatch: function(change, db, audit, callback) {
+        const self = module.exports,
+            doc = change.doc;
 
-        var self = module.exports,
-            doc = change.doc,
-            locale = self._getLocale(doc);
+        let key;
 
         if (self._isMessageEmpty(doc)) {
-            self._addMessage(doc, self._translate('empty', locale));
+            key = 'empty';
         } else if (self._isConfigFormsOnlyMode() && self._isFormNotFound(doc)) {
-            self._addMessage(doc, self._translate('form_not_found', locale));
+            key = 'form_not_found';
         } else if (self._isFormNotFound(doc)) {
-            self._addMessage(doc, self._translate('sms_received', locale));
+            key = 'sms_received';
         } else if (self._isValidUnstructuredMessage(doc)) {
-            self._addMessage(doc, self._translate('sms_received', locale));
+            key = 'sms_received';
         }
 
-        callback(null, true);
+        if (!key) {
+            return callback(null, true);
+        }
+
+        self._addMessage(doc, key).then(() => callback(null, true));
     }
 };

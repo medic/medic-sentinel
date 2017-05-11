@@ -62,7 +62,7 @@ module.exports = {
             });
         var msg = messages.getMessage(evConf, locale);
         if (msg) {
-            messages.addMessage({
+            return messages.addMessage({
                 doc: doc,
                 message: msg,
                 phone: messages.getRecipientPhone(doc, msg.recipient),
@@ -70,6 +70,7 @@ module.exports = {
             });
         } else {
             module.exports._addErr(event_type, config, doc);
+            return Promise.resolve();
         }
     },
     filter: function(doc) {
@@ -137,21 +138,32 @@ module.exports = {
                 db: db,
                 id: patient_id
             }, function(err, registrations) {
-
                 if (err) {
-                    callback(err);
-                } else if (registrations.length) {
-                    if (eventType.mute) {
-                        if (config.confirm_deactivation) {
-                            self._addErr('confirm_deactivation', config, doc);
-                            self._addMsg('confirm_deactivation', config, doc, registrations);
-                            return callback(null, true);
-                        } else {
-                            self._addMsg('on_mute', config, doc, registrations);
-                        }
+                    return callback(err);
+                }
+                if (!registrations.length) {
+                    self._addErr('patient_not_found', config, doc);
+                    self._addMsg('patient_not_found', config, doc, registrations).then(() => {
+                        callback(null, true);
+                    });
+                    return;
+                }
+
+                let addMessagePromise;
+                if (eventType.mute) {
+                    if (config.confirm_deactivation) {
+                        self._addErr('confirm_deactivation', config, doc);
+                        self._addMsg('confirm_deactivation', config, doc, registrations).then(() => {
+                            callback(null, true);
+                        });
+                        return;
                     } else {
-                        self._addMsg('on_unmute', config, doc, registrations);
+                        addMessagePromise = self._addMsg('on_mute', config, doc, registrations);
                     }
+                } else {
+                    addMessagePromise = self._addMsg('on_unmute', config, doc, registrations);
+                }
+                addMessagePromise.then(() => {
                     async.each(registrations, function(registration, callback) {
                         self.modifyRegistration({
                             audit: audit,
@@ -165,11 +177,7 @@ module.exports = {
                             callback(null, true);
                         }
                     });
-                } else {
-                    self._addErr('patient_not_found', config, doc);
-                    self._addMsg('patient_not_found', config, doc, registrations);
-                    callback(null, true);
-                }
+                });
             });
         });
     }

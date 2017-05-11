@@ -73,23 +73,28 @@ module.exports = {
             report = options.report;
 
         if (registrations && registrations.length) {
-            _.each(report.messages, function(msg) {
+            const messagePromises = [];
+            report.messages.forEach(msg => {
                 if (msg.event_type === 'report_accepted') {
-                    messages.addMessage({
+                    messagePromises.push(messages.addMessage({
                         doc: doc,
                         message: messages.getMessage(msg, locale),
                         phone: messages.getRecipientPhone(doc, msg.recipient),
                         registrations: registrations
-                    });
+                    }));
                 }
             });
-            return module.exports.silenceRegistrations({
-                db: options.db,
-                audit: options.audit,
-                report: report,
-                doc: doc,
-                registrations: registrations
-            }, callback);
+            Promise.all(messagePromises)
+                .then(() => {
+                    module.exports.silenceRegistrations({
+                        db: options.db,
+                        audit: options.audit,
+                        report: report,
+                        doc: doc,
+                        registrations: registrations
+                    }, callback);
+                })
+                .catch(callback);
         }
 
         return callback(null, true);
@@ -209,8 +214,12 @@ module.exports = {
                 }
 
                 if (!patientContactId) {
-                    transitionUtils.addRegistrationNotFoundError(doc, report);
-                    return callback(null, true);
+                    transitionUtils.addRegistrationNotFoundError(doc, report)
+                        .then(() => {
+                            callback(null, true);
+                        })
+                        .catch(callback);
+                    return;
                 }
 
                 module.exports.handleReport({

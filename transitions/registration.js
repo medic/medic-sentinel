@@ -202,8 +202,12 @@ module.exports = {
                     }
 
                     if (!patientContactId) {
-                        transitionUtils.addRegistrationNotFoundError(doc, registrationConfig);
-                        return callback(null, true);
+                        transitionUtils.addRegistrationNotFoundError(doc, registrationConfig)
+                            .then(() => {
+                                callback(null, true);
+                            })
+                            .catch(callback);
+                        return;
                     }
 
                     return self.fireConfiguredTriggers(db, audit, registrationConfig, doc, callback);
@@ -339,18 +343,21 @@ module.exports = {
             if (err) {
                 return callback(err);
             }
+            const messagePromises = [];
             config.messages.forEach(function(msg) {
                 if (!msg.event_type || msg.event_type === 'report_accepted') {
-                    messages.addMessage({
+                    messagePromises.push(messages.addMessage({
                         doc: doc,
                         phone: messages.getRecipientPhone(doc, msg.recipient),
                         message: messages.getMessage(msg, locale),
                         options: extra,
                         registrations: registrations
-                    });
+                    }));
                 }
             });
-            callback();
+            Promise.all(messagePromises)
+                .then(() => callback())
+                .catch(callback);
         });
     },
     assignSchedule: function(options, callback) {
@@ -387,8 +394,13 @@ module.exports = {
                 transitionUtils.addRejectionMessage(
                     doc,
                     options.registrationConfig,
-                    'no_provided_patient_id');
-                return callback(null, true);
+                    'no_provided_patient_id'
+                )
+                .then(() => {
+                    callback(null, true);
+                })
+                .catch(callback);
+                return;
             }
 
             transitionUtils.isIdUnique(db, providedId, function(err, isUnique) {
@@ -404,8 +416,13 @@ module.exports = {
                 transitionUtils.addRejectionMessage(
                     doc,
                     options.registrationConfig,
-                    'provided_patient_id_not_unique');
-                callback(null, true);
+                    'provided_patient_id_not_unique'
+                )
+                .then(() => {
+                    callback(null, true);
+                })
+                .catch(callback);
+                return;
             });
         } else {
             transitionUtils.addUniqueId(db, doc, callback);
@@ -435,10 +452,11 @@ module.exports = {
                     return callback(err);
                 }
                 var contact = _.result(_.first(result.rows), 'doc');
+                var parent = transitionUtils.extractLineage(contact && contact.parent);
                 // create a new patient with this patient_id
                 var patient = {
                     name: doc.fields[patientNameField],
-                    parent: contact && contact.parent,
+                    parent: parent,
                     reported_date: doc.reported_date,
                     type: 'person',
                     patient_id: patientShortcode

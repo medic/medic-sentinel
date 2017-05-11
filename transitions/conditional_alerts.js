@@ -18,24 +18,22 @@ module.exports = {
             doc.transitions.conditional_alerts
         );
     },
-    _runCondition: function(condition, context, callback) {
+    _runCondition: function(condition, context) {
         try {
-            callback(null, vm.runInNewContext(condition, context));
+            return Promise.resolve(vm.runInNewContext(condition, context));
         } catch(e) {
-            callback(e.message);
+            return Promise.reject(e.message);
         }
     },
-    _evaluateCondition: function(doc, alert, callback) {
+    _evaluateCondition: function(doc, alert) {
         var context = { doc: doc };
         if (alert.condition.indexOf(alert.form) === -1) {
-            module.exports._runCondition(alert.condition, context, callback);
-        } else {
-            utils.getRecentForm({
-                doc: doc,
-                formName: alert.form
-            }, function(err, rows) {
+            return module.exports._runCondition(alert.condition, context);
+        }
+        return new Promise((resolve, reject) => {
+            utils.getRecentForm({ doc: doc, formName: alert.form }, function(err, rows) {
                 if (err) {
-                    return callback(err);
+                    return reject(err);
                 }
                 rows = _.sortBy(rows, function(row) {
                     return row.reported_date;
@@ -44,9 +42,9 @@ module.exports = {
                     var row = rows[rows.length - 1 - i];
                     return row ? row.doc : row;
                 };
-                module.exports._runCondition(alert.condition, context, callback);
+                return module.exports._runCondition(alert.condition, context);
             });
-        }
+        });
     },
     filter: function(doc) {
         var self = module.exports;
@@ -65,28 +63,32 @@ module.exports = {
         async.each(
             _.values(config),
             function(alert, callback) {
-                if (alert.form === doc.form) {
-                    module.exports._evaluateCondition(doc, alert, function(err, result) {
-                        if (err) {
-                            return callback(err);
-                        } else if(result) {
-                            var phone = messages.getRecipientPhone(
-                                doc, 
-                                alert.recipient, 
-                                alert.recipient
-                            );
-                            messages.addMessage({
+                if (alert.form !== doc.form) {
+                    return callback();
+                }
+                module.exports._evaluateCondition(doc, alert)
+                    .then(result => {
+                        if (!result) {
+                            return;
+                        }
+                        return messages.getRecipientPhone(
+                            doc, 
+                            alert.recipient, 
+                            alert.recipient
+                        )
+                        .then(phone => {
+                            return messages.addMessage({
                                 doc: doc,
                                 phone: phone,
                                 message: alert.message
                             });
+                        })
+                        .then(() => {
                             updated = true;
-                        }
-                        callback();
-                    });
-                } else {
-                    callback();
-                }
+                            callback();
+                        });
+                    })
+                    .catch(callback);
             }, 
             function(err) {
                 cb(err, updated);

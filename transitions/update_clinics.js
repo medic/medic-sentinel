@@ -1,5 +1,6 @@
 var _ = require('underscore'),
-    logger = require('../lib/logger');
+    logger = require('../lib/logger'),
+    transitionUtils = require('./utils');
 
 var associateContact = function(audit, doc, contact, callback) {
     var self = module.exports;
@@ -95,7 +96,7 @@ module.exports = {
         }
     },
     setContact: function(doc, contact, callback) {
-        doc.contact = contact;
+        doc.contact = transitionUtils.extractLineage(contact);
         // remove facility not found errors
         doc.errors = _.reject(doc.errors, function(error) {
             return error.code === 'sys.facility_not_found';
