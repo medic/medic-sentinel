@@ -494,7 +494,7 @@ exports['hydrateDoc returns errors from fetch'] = test => {
     const expected = 'boom';
     const docId = 'abc';
     const contactId = 'def';
-    const view = sinon.stub(db.medic, 'view').callsArgWith(3, null, {
+    sinon.stub(db.medic, 'view').callsArgWith(3, null, {
         rows: [ { doc: { contact: { _id: contactId } } } ]
     });
     const fetch = sinon.stub(db.medic, 'fetch').callsArgWith(1, expected);
@@ -508,7 +508,7 @@ exports['hydrateDoc returns errors from fetch'] = test => {
 exports['hydrateDoc handles no lineage and no contact'] = test => {
     const docId = 'abc';
     const expected = { _id: docId };
-    const view = sinon.stub(db.medic, 'view').callsArgWith(3, null, { rows: [ { doc: expected } ] });
+    sinon.stub(db.medic, 'view').callsArgWith(3, null, { rows: [ { doc: expected } ] });
     const fetch = sinon.stub(db.medic, 'fetch').callsArgWith(1, null, { rows: [] });
     utils.hydrateDoc(db, docId, (err, actual) => {
         test.equals(err, null);
@@ -541,7 +541,7 @@ exports['hydrateDoc attaches the lineage'] = test => {
             }
         }
     };
-    const view = sinon.stub(db.medic, 'view').callsArgWith(3, null, { rows: [
+    sinon.stub(db.medic, 'view').callsArgWith(3, null, { rows: [
         { doc: given },
         { doc: parent },
         { doc: grandparent }
