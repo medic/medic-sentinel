@@ -435,10 +435,11 @@ module.exports = {
                     return callback(err);
                 }
                 var contact = _.result(_.first(result.rows), 'doc');
+                var parent = transitionUtils.extractLineage(contact && contact.parent);
                 // create a new patient with this patient_id
                 var patient = {
                     name: doc.fields[patientNameField],
-                    parent: contact && contact.parent,
+                    parent: parent,
                     reported_date: doc.reported_date,
                     type: 'person',
                     patient_id: patientShortcode

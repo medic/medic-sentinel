@@ -7,6 +7,7 @@ const _ = require('underscore'),
       follow = require('follow'),
       async = require('async'),
       utils = require('../lib/utils'),
+      transitionUtils = require('./utils'),
       logger = require('../lib/logger'),
       config = require('../config'),
       db = require('../db'),
@@ -75,7 +76,7 @@ const processChange = (change, callback) => {
   if (!change) {
     return callback();
   }
-  db.medic.get(change.id, (err, doc) => {
+  utils.hydrateDoc(db, change.id, (err, doc) => {
     if (err) {
       logger.error(`transitions: fetch failed for ${change.id} (${err})`);
       return callback();
@@ -204,6 +205,10 @@ const finalize = (options, callback) => {
   logger.debug(
     `calling audit.saveDoc on doc ${change.id} seq ${change.seq}`);
 
+  change.doc.parent = transitionUtils.extractLineage(change.doc.parent);
+  if (change.doc.contact && change.doc.contact._id) {
+    change.doc.contact = { _id: change.doc.contact._id };
+  }
   audit.saveDoc(change.doc, err => {
     // todo: how to handle a failed save? for now just
     // waiting until next change and try again.
