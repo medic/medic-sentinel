@@ -97,7 +97,7 @@ exports['add_patient trigger creates a new patient'] = function(test) {
         test.equal(view.callCount, 1);
         test.equal(view.args[0][0], 'medic-client');
         test.equal(view.args[0][1], 'people_by_phone');
-        test.deepEqual(view.args[0][2].key, [ senderPhoneNumber ]);
+        test.equal(view.args[0][2].key, senderPhoneNumber);
         test.equal(view.args[0][2].include_docs, true);
         test.equal(saveDoc.callCount, 1);
         test.equal(saveDoc.args[0][0].name, patientName);

@@ -428,7 +428,7 @@ module.exports = {
             }
 
             db.medic.view('medic-client', 'people_by_phone', {
-                key: [ doc.from ],
+                key: doc.from,
                 include_docs: true
             }, function(err, result) {
                 if (err) {
