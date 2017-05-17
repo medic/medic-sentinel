@@ -207,7 +207,10 @@ const finalize = (options, callback) => {
 
   change.doc.parent = transitionUtils.extractLineage(change.doc.parent);
   if (change.doc.contact && change.doc.contact._id) {
-    change.doc.contact = { _id: change.doc.contact._id };
+    change.doc.contact = {
+      _id: change.doc.contact._id,
+      parent: transitionUtils.extractLineage(change.doc.contact.parent)
+    };
   }
   audit.saveDoc(change.doc, err => {
     // todo: how to handle a failed save? for now just
