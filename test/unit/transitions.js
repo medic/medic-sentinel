@@ -3,7 +3,7 @@ const sinon = require('sinon').sandbox.create(),
       audit = require('couchdb-audit'),
       config = require('../../config'),
       db = require('../../db'),
-      utils = require('../../lib/utils'),
+      lineage = require('../../lib/lineage'),
       transitions = require('../../transitions');
 
 exports.tearDown = callback => {
@@ -198,7 +198,7 @@ exports['loadTransitions doesnt load system transistions that have been explicit
 exports['attach handles missing meta data doc'] = test => {
   const get = sinon.stub(db.medic, 'get');
   get.withArgs('sentinel-meta-data').callsArgWith(1, { statusCode: 404 });
-  const hydrateDoc = sinon.stub(utils, 'hydrateDoc').callsArgWith(2, null, { type: 'data_record' });
+  const fetchHydratedDoc = sinon.stub(lineage, 'fetchHydratedDoc').callsArgWith(1, null, { type: 'data_record' });
   const insert = sinon.stub(db.medic, 'insert').callsArg(1);
   const on = sinon.stub();
   const start = sinon.stub();
@@ -208,8 +208,8 @@ exports['attach handles missing meta data doc'] = test => {
   // wait for the queue processor
   transitions._changeQueue.drain = () => {
     test.equal(get.callCount, 2);
-    test.equal(hydrateDoc.callCount, 1);
-    test.equal(hydrateDoc.args[0][1], 'abc');
+    test.equal(fetchHydratedDoc.callCount, 1);
+    test.equal(fetchHydratedDoc.args[0][0], 'abc');
     test.equal(applyTransitions.callCount, 1);
     test.equal(applyTransitions.args[0][0].change.id, 'abc');
     test.equal(applyTransitions.args[0][0].change.seq, 55);
@@ -231,7 +231,7 @@ exports['attach handles missing meta data doc'] = test => {
 exports['attach handles existing meta data doc'] = test => {
   const get = sinon.stub(db.medic, 'get');
   get.withArgs('sentinel-meta-data').callsArgWith(1, null, { _id: 'sentinel-meta-data', processed_seq: 22 });
-  const hydrateDoc = sinon.stub(utils, 'hydrateDoc').callsArgWith(2, null, { type: 'data_record' });
+  const fetchHydratedDoc = sinon.stub(lineage, 'fetchHydratedDoc').callsArgWith(1, null, { type: 'data_record' });
   const insert = sinon.stub(db.medic, 'insert').callsArg(1);
   const on = sinon.stub();
   const start = sinon.stub();
@@ -241,8 +241,8 @@ exports['attach handles existing meta data doc'] = test => {
   // wait for the queue processor
   transitions._changeQueue.drain = () => {
     test.equal(get.callCount, 2);
-    test.equal(hydrateDoc.callCount, 1);
-    test.equal(hydrateDoc.args[0][1], 'abc');
+    test.equal(fetchHydratedDoc.callCount, 1);
+    test.equal(fetchHydratedDoc.args[0][0], 'abc');
     test.equal(applyTransitions.callCount, 1);
     test.equal(applyTransitions.args[0][0].change.id, 'abc');
     test.equal(applyTransitions.args[0][0].change.seq, 55);

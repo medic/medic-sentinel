@@ -4,6 +4,7 @@ var vm = require('vm'),
     utils = require('../lib/utils'),
     transitionUtils = require('./utils'),
     logger = require('../lib/logger'),
+    lineage = require('../lib/lineage'),
     messages = require('../lib/messages'),
     validation = require('../lib/validation'),
     schedules = require('../lib/schedules'),
@@ -435,11 +436,11 @@ module.exports = {
                     return callback(err);
                 }
                 var contact = _.result(_.first(result.rows), 'doc');
-                var parent = transitionUtils.extractLineage(contact && contact.parent);
+                lineage.minify(contact);
                 // create a new patient with this patient_id
                 var patient = {
                     name: doc.fields[patientNameField],
-                    parent: parent,
+                    parent: contact && contact.parent,
                     reported_date: doc.reported_date,
                     type: 'person',
                     patient_id: patientShortcode
