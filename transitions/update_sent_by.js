@@ -20,7 +20,7 @@ module.exports = {
     onMatch: function(change, db, audit, callback) {
         var doc = change.doc;
 
-        db.medic.view('medic-client', 'people_by_phone', {
+        db.medic.view('medic-client', 'contacts_by_phone', {
             key: doc.from,
             include_docs: true
         }, function(err, result) {

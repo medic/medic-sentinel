@@ -428,7 +428,7 @@ module.exports = {
                 return callback();
             }
 
-            db.medic.view('medic-client', 'people_by_phone', {
+            db.medic.view('medic-client', 'contacts_by_phone', {
                 key: doc.from,
                 include_docs: true
             }, function(err, result) {

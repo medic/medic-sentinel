@@ -58,7 +58,7 @@ var getContact = function(db, doc, callback) {
             include_docs: true,
             limit: 1
         };
-        db.medic.view('medic-client', 'people_by_phone', params, function(err, data) {
+        db.medic.view('medic-client', 'contacts_by_phone', params, function(err, data) {
             if (err) {
                 return callback(err);
             }
