@@ -65,6 +65,31 @@ exports['onMatch with matching form calls getRegistrations and then matchRegistr
     });
 };
 
+exports['onMatch with patient_id as top-level field calls getRegistrations and then matchRegistrations'] = function(test) {
+    sinon.stub(transition, 'getAcceptedReports').returns([ { form: 'x' } ]);
+
+    var getRegistrations = sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, []),
+        getPatientContactUuid = sinon.stub(utils, 'getPatientContactUuid').callsArgWith(2, null, {_id: 'uuid'}),
+        matchRegistrations = sinon.stub(transition, 'matchRegistrations').callsArgWith(1, null, true);
+
+    transition.onMatch({
+        doc: {
+            form: 'x',
+            patient_id: 'x'
+        }
+    }, {}, {}, function(err, complete) {
+        test.equal(complete, true);
+
+        test.equal(getRegistrations.called, true);
+        test.equal(getPatientContactUuid.called, true);
+        test.equal(getPatientContactUuid.callCount, 1);
+        test.equal(getPatientContactUuid.args[0][1], 'x');
+        test.equal(matchRegistrations.called, true);
+
+        test.done();
+    });
+};
+
 exports['onMatch with no patient id adds error msg and response'] = function(test) {
     sinon.stub(transition, 'getAcceptedReports').returns([ { form: 'x' }, { form: 'z' } ]);
     sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, []);
