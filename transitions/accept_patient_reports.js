@@ -155,11 +155,12 @@ module.exports = {
     },
     handleReport: function(options, callback) {
         var db = options.db,
-            doc = options.doc;
+            doc = options.doc,
+            patient_id = (doc.fields && doc.fields.patient_id) || doc.patient_id;
 
         utils.getRegistrations({
             db: db,
-            id: doc.fields && doc.fields.patient_id
+            id: patient_id
         }, function(err, registrations) {
             module.exports.matchRegistrations({
                 db: db,
@@ -203,7 +204,9 @@ module.exports = {
                 return callback(null, true);
             }
 
-            utils.getPatientContactUuid(_db, doc.fields.patient_id, function(err, patientContactId) {
+            var patient_id = (doc.fields && doc.fields.patient_id) || doc.patient_id;
+
+            utils.getPatientContactUuid(_db, patient_id, function(err, patientContactId) {
                 if (err) {
                     return callback(err);
                 }
