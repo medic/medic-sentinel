@@ -427,9 +427,9 @@ exports['hydrate+minify is noop on a place'] = test => {
   };
 
   sinon.stub(db.medic, 'view').callsArgWith(3, null, { rows: [
-    { doc: JSON.parse(JSON.stringify(given)) },
-    { doc: parent },
-    { doc: grandparent }
+   { doc: JSON.parse(JSON.stringify(given)) },
+   { doc: parent },
+   { doc: grandparent }
   ] });
 
   const fetch = sinon.stub(db.medic, 'fetch');
