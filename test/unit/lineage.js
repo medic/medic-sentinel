@@ -148,14 +148,8 @@ exports['hydrateDoc attaches the full lineage for reports'] = test => {
   const fetch = sinon.stub(db.medic, 'fetch');
   fetch.callsFake((options, callback) => {
     const contactDocs = options.keys.map(id => {
-      switch (id) {
-        case givenContact._id:
-          return givenContact;
-        case parentContact._id:
-          return parentContact;
-        case grandparentContact._id:
-          return grandparentContact;
-      }
+      return [ givenContact, parentContact, grandparentContact ]
+        .find(contact => contact._id === id);
     });
     callback(null, { rows: contactDocs.map(doc => { return {doc: doc}; }) });
   });
@@ -370,7 +364,7 @@ exports['hydrate+minify is noop on a report'] = test => {
     }
   };
   sinon.stub(db.medic, 'view').callsArgWith(3, null, { rows: [
-    { doc: given },
+    { doc: JSON.parse(JSON.stringify(given)) },
     { doc: givenContact },
     { doc: parent },
     { doc: grandparent }
@@ -379,14 +373,8 @@ exports['hydrate+minify is noop on a report'] = test => {
   const fetch = sinon.stub(db.medic, 'fetch');
   fetch.callsFake((options, callback) => {
     const contactDocs = options.keys.map(id => {
-      switch (id) {
-        case givenContact._id:
-          return givenContact;
-        case parentContact._id:
-          return parentContact;
-        case grandparentContact._id:
-          return grandparentContact;
-      }
+      return [ givenContact, parentContact, grandparentContact ]
+        .find(contact => contact._id === id);
     });
     callback(null, { rows: contactDocs.map(doc => { return {doc: doc}; }) });
   });
@@ -394,7 +382,7 @@ exports['hydrate+minify is noop on a report'] = test => {
   lineage.fetchHydratedDoc(docId, (err, actual) => {
     test.equals(err, null);
     lineage.minify(actual);
-    test.deepEqual(given, actual);
+    test.deepEqual(actual, given);
     test.done();
   });
 };
@@ -437,20 +425,26 @@ exports['hydrate+minify is noop on a place'] = test => {
       }
     }
   };
+
   sinon.stub(db.medic, 'view').callsArgWith(3, null, { rows: [
-    { doc: given },
+    { doc: JSON.parse(JSON.stringify(given)) },
     { doc: parent },
     { doc: grandparent }
   ] });
-  sinon.stub(db.medic, 'fetch').callsArgWith(1, null, { rows: [
-    { doc: givenContact },
-    { doc: parentContact },
-    { doc: grandparentContact }
-  ] });
+
+  const fetch = sinon.stub(db.medic, 'fetch');
+  fetch.callsFake((options, callback) => {
+    const contactDocs = options.keys.map(id => {
+      return [ givenContact, parentContact, grandparentContact ]
+        .find(contact => contact._id === id);
+    });
+    callback(null, { rows: contactDocs.map(doc => { return {doc: doc}; }) });
+  });
+
   lineage.fetchHydratedDoc(docId, (err, actual) => {
     test.equals(err, null);
     lineage.minify(actual);
-    test.deepEqual(given, actual);
+    test.deepEqual(actual, given);
     test.done();
   });
 };
