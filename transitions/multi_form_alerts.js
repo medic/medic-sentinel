@@ -27,9 +27,16 @@ const fetchReports = (latestTimestamp, timeWindowInDays, formTypes) => {
 };
 
 const hydrateDocs = (docs) => {
-  return Promise.all(docs.map((doc) => {
-    return lineage.fetchHydratedDocPromise(doc._id);
-  }));
+  const fetchedDocsPromise = docs.reduce(function(promise, doc) {
+    return promise.then((fetchedDocs) => {
+      return lineage.fetchHydratedDocPromise(doc._id)
+        .then(fetchedDoc => {
+          fetchedDocs.push(fetchedDoc);
+          return fetchedDocs;
+        });
+    });
+  }, Promise.resolve([]));
+  return fetchedDocsPromise;
 };
 
 const countReports = (reports, isReportCountedString) => {
