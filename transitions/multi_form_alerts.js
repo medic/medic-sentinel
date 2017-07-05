@@ -38,7 +38,8 @@ const countReports = (reports, isReportCountedString) => {
     try {
       return vm.runInNewContext('(' + isReportCountedString + ')(report, latestReport)', context);
     } catch(err) {
-      logger.error('Could not eval "isReportCounted" function. Report will not be counted. Function passed: "' +
+      logger.error('Could not eval "isReportCounted" function for (report=' + context.report._id + ', latestReport=' + context.latestReport._id +
+        '). Report will not be counted. Function passed: "' +
         isReportCountedString + '". Error: ' +
         err.message);
       return false;
@@ -49,7 +50,6 @@ const countReports = (reports, isReportCountedString) => {
 const generateMessages = (recipients, messageTemplate, countedReports) => {
   let isLatestReportChanged = false;
   const phones = getPhones(recipients, countedReports);
-
   phones.forEach((phone) => {
     if (phone.error) {
       logger.error(phone.error);
@@ -76,6 +76,10 @@ const generateMessages = (recipients, messageTemplate, countedReports) => {
 //    'countedReports.map((report) => report.contact.phone)'     // returns string array
 // ]
 const getPhones = (recipients, countedReports) => {
+  return _.uniq(getPhonesWithDuplicates(recipients, countedReports));
+};
+
+const getPhonesWithDuplicates = (recipients, countedReports) => {
   const getPhonesOneRecipient = (recipient, countedReports) => {
     if (!recipient) {
       return [];

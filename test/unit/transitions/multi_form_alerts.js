@@ -45,8 +45,8 @@ const doc = {
 };
 
 const reports = [
-  { _id: 'docA', form: 'A' },
-  { _id: 'docB', form: 'B'}
+  { _id: 'docA', form: 'A', contact: { _id: 'contactA' } },
+  { _id: 'docB', form: 'B', contact: { _id: 'contactB' } },
 ];
 
 const hydratedReports = [
@@ -235,13 +235,16 @@ exports['adds multiple messages when multiple recipients are evaled'] = test => 
     [_.defaults({ recipients: [recipient]} , alert)]);
 
   transition.onMatch({ doc: doc }, undefined, undefined, (err, docNeedsSaving) => {
-    test.equals(messages.addMessage.getCalls().length, 2);
+    test.equals(messages.addMessage.getCalls().length, 3); // 3 counted reports, one phone number each.
+    const actualPhones = messages.addMessage.getCalls().map(call => call.args[0].phone);
+    const expectedPhones = [doc.contact.phone, hydratedReports[0].contact.phone, hydratedReports[1].contact.phone];
+    test.deepEqual(actualPhones, expectedPhones);
+
     test.equals(messages.addError.getCalls().length, 0);
 
     test.ok(docNeedsSaving);
     test.done();
   });
-  test.done();
 };
 
 exports['adds message when recipient cannot be evaled'] = test => {
@@ -302,6 +305,22 @@ exports['adds multiple messages when mutiple recipients'] = test => {
     assertMessage(test, messages.addMessage.getCall(3), hydratedReports[1].contact.phone, alert.message);
 
     test.equals(messages.addMessage.getCalls().length, 4);
+
+    test.done();
+  });
+};
+
+exports['dedups message recipients'] = test => {
+  var alertMultipleRecipients = _.defaults({
+    recipients: ['countedReports[0].contact.phone', 'countedReports[0].contact.phone']},
+    alert);
+  sinon.stub(config, 'get').returns([alertMultipleRecipients]);
+
+  transition.onMatch({ doc: doc }, undefined, undefined, () => {
+    test.equals(messages.addError.getCalls().length, 0);
+
+    test.equals(messages.addMessage.getCalls().length, 1); // 2 recipients specified, deduped to 1.
+    test.equals(messages.addMessage.getCall(0).args[0].phone, doc.contact.phone);
 
     test.done();
   });
