@@ -12,26 +12,27 @@ exports.tearDown = callback => {
   callback();
 };
 
+let alert;
 exports.setUp = callback => {
-  sinon.stub(utils, 'getReportsWithinTimeWindow').returns(Promise.resolve(reports));
+  // reset alert.
+  alert = {
+    isReportCounted: 'function() { return true; }',
+    numReportsThreshold : 3,
+    message : 'hi',
+    recipients : ['+254777888999'],
+    timeWindowInDays : 7
+  };
+  callback();
+};
+
+const stubFetchHydratedDocs = () => {
   sinon.stub(lineage, 'fetchHydratedDocPromise').callsFake(id => {
     if (id === doc._id) { return Promise.resolve(doc); }
     if (id === reports[0]._id) { return Promise.resolve(hydratedReports[0]); }
     if (id === reports[1]._id) { return Promise.resolve(hydratedReports[1]); }
   });
-  sinon.spy(vm, 'runInNewContext'); // spy, not stub, to pass through
-  sinon.stub(messages, 'addError');
-  sinon.stub(messages, 'addMessage');
-  callback();
 };
 
-const alert = {
-  isReportCounted: 'function() { return true; }',
-  numReportsThreshold : 3,
-  message : 'hi',
-  recipients : ['+254777888999'],
-  timeWindowInDays : 7
-};
 
 // doc is hydrated before being passed to the transition.
 const doc = {
@@ -91,7 +92,7 @@ exports['filter validation hasRun'] = test => {
   test.done();
 };
 
-const testValidate = (test, alert) => {
+const testConfigIsValid = (test, alert) => {
   sinon.stub(config, 'get').returns([alert]);
   transition.onMatch({ doc: doc }, null, null, (err, docNeedsSaving) => {
     test.equals(config.get.getCall(0).args[0], 'multi_form_alerts');
@@ -102,27 +103,28 @@ const testValidate = (test, alert) => {
 };
 
 exports['validates config : isReportCounted'] = test => {
-  testValidate(test, _.omit(alert, 'isReportCounted'));
+  testConfigIsValid(test, _.omit(alert, 'isReportCounted'));
 };
 
 exports['validates config : numReportsThreshold'] = test => {
-  testValidate(test, _.omit(alert, 'numReportsThreshold'));
+  testConfigIsValid(test, _.omit(alert, 'numReportsThreshold'));
 };
 
 exports['validates config : message'] = test => {
-  testValidate(test, _.omit(alert, 'message'));
+  testConfigIsValid(test, _.omit(alert, 'message'));
 };
 
 exports['validates config : recipients'] = test => {
-  testValidate(test, _.omit(alert, 'recipients'));
+  testConfigIsValid(test, _.omit(alert, 'recipients'));
 };
 
 exports['validates config : timeWindowInDays'] = test => {
-  testValidate(test, _.omit(alert, 'timeWindowInDays'));
+  testConfigIsValid(test, _.omit(alert, 'timeWindowInDays'));
 };
 
 exports['fetches reports within time window'] = test => {
   sinon.stub(config, 'get').returns([alert]);
+  sinon.stub(utils, 'getReportsWithinTimeWindow').returns(Promise.resolve(reports));
 
   transition.onMatch({ doc: doc }, undefined, undefined, () => {
     test.equals(utils.getReportsWithinTimeWindow.callCount, 1);
@@ -134,6 +136,9 @@ exports['fetches reports within time window'] = test => {
 
 exports['filters reports by form if forms is present in config'] = test => {
   sinon.stub(config, 'get').returns([_.extend({forms: ['A']} , alert)]);
+  sinon.stub(utils, 'getReportsWithinTimeWindow').returns(Promise.resolve(reports));
+  stubFetchHydratedDocs();
+  sinon.spy(vm, 'runInNewContext'); // spy, not stub, to pass through
 
   transition.onMatch({ doc: doc }, undefined, undefined, () => {
     const countedReports = vm.runInNewContext.getCalls().map((call) => call.args[1].report);
@@ -146,6 +151,9 @@ exports['filters reports by form if forms is present in config'] = test => {
 
 exports['evals isReportCounted'] = test => {
   sinon.stub(config, 'get').returns([alert]);
+  sinon.stub(utils, 'getReportsWithinTimeWindow').returns(Promise.resolve(reports));
+  stubFetchHydratedDocs();
+  sinon.spy(vm, 'runInNewContext'); // spy, not stub, to pass through
 
   transition.onMatch({ doc: doc }, undefined, undefined, () => {
     const script = vm.runInNewContext.args[0][0];
@@ -156,10 +164,13 @@ exports['evals isReportCounted'] = test => {
 
 exports['if not enough reports pass the isReportCounted func, does nothing'] = test => {
   sinon.stub(config, 'get').returns([alert]);
-
+  sinon.stub(utils, 'getReportsWithinTimeWindow').returns(Promise.resolve(reports));
+  stubFetchHydratedDocs();
   // make all reports fail
-  vm.runInNewContext.restore();
   sinon.stub(vm, 'runInNewContext').returns(false);
+  sinon.stub(messages, 'addError');
+  sinon.stub(messages, 'addMessage');
+
 
   transition.onMatch({ doc: doc }, undefined, undefined, () => {
     test.equals(vm.runInNewContext.getCalls().length, alert.numReportsThreshold); // 3
@@ -171,9 +182,12 @@ exports['if not enough reports pass the isReportCounted func, does nothing'] = t
 
 exports['if no reports in time window, does nothing'] = test => {
   sinon.stub(config, 'get').returns([alert]);
-
-  utils.getReportsWithinTimeWindow.restore();
+  // No reports
   sinon.stub(utils, 'getReportsWithinTimeWindow').returns(Promise.resolve([]));
+  stubFetchHydratedDocs();
+  sinon.spy(vm, 'runInNewContext'); // spy, not stub, to pass through
+  sinon.stub(messages, 'addError');
+  sinon.stub(messages, 'addMessage');
 
   transition.onMatch({ doc: doc }, undefined, undefined, (err, docNeedsSaving) => {
     test.equals(messages.addError.getCalls().length, 0);
@@ -183,8 +197,7 @@ exports['if no reports in time window, does nothing'] = test => {
   });
 };
 
-const assertMessage = (test, call, recipient, message) => {
-    const messageArgs = call.args[0];
+const assertMessage = (test, messageArgs, recipient, message) => {
     test.deepEqual(messageArgs, {
       doc: doc,
       phone: recipient,
@@ -195,12 +208,17 @@ const assertMessage = (test, call, recipient, message) => {
 
 const assertMessages = (test, addMessageStub, alert) => {
   addMessageStub.getCalls().forEach((call, i) => {
-    assertMessage(test, call, alert.recipients[i], alert.message);
+    assertMessage(test, call.args[0], alert.recipients[i], alert.message);
   });
 };
 
 exports['if enough reports pass the isReportCounted func, adds message'] = test => {
   sinon.stub(config, 'get').returns([alert]);
+  sinon.stub(utils, 'getReportsWithinTimeWindow').returns(Promise.resolve(reports));
+  stubFetchHydratedDocs();
+  sinon.spy(vm, 'runInNewContext'); // spy, not stub, to pass through
+  sinon.stub(messages, 'addError');
+  sinon.stub(messages, 'addMessage');
 
   transition.onMatch({ doc: doc }, undefined, undefined, (err, docNeedsSaving) => {
     test.equals(vm.runInNewContext.getCalls().length, alert.numReportsThreshold); // 3
@@ -217,8 +235,14 @@ exports['if enough reports pass the isReportCounted func, adds message'] = test 
 
 exports['adds message when recipient is evaled'] = test => {
   const recipient = 'countedReports[0].contact.phone';
-  sinon.stub(config, 'get').returns(
-    [_.defaults({ recipients: [recipient]} , alert)]);
+  alert.recipients = [recipient];
+  sinon.stub(config, 'get').returns([alert]);
+
+  sinon.stub(utils, 'getReportsWithinTimeWindow').returns(Promise.resolve(reports));
+  stubFetchHydratedDocs();
+  sinon.spy(vm, 'runInNewContext'); // spy, not stub, to pass through
+  sinon.stub(messages, 'addError');
+  sinon.stub(messages, 'addMessage');
 
   transition.onMatch({ doc: doc }, undefined, undefined, (err, docNeedsSaving) => {
     test.equals(messages.addMessage.getCalls().length, 1);
@@ -231,8 +255,14 @@ exports['adds message when recipient is evaled'] = test => {
 
 exports['adds multiple messages when multiple recipients are evaled'] = test => {
   const recipient = 'countedReports.map(report => report.contact.phone)';
-  sinon.stub(config, 'get').returns(
-    [_.defaults({ recipients: [recipient]} , alert)]);
+  alert.recipients = [recipient];
+  sinon.stub(config, 'get').returns([alert]);
+
+  sinon.stub(utils, 'getReportsWithinTimeWindow').returns(Promise.resolve(reports));
+  stubFetchHydratedDocs();
+  sinon.spy(vm, 'runInNewContext'); // spy, not stub, to pass through
+  sinon.stub(messages, 'addError');
+  sinon.stub(messages, 'addMessage');
 
   transition.onMatch({ doc: doc }, undefined, undefined, (err, docNeedsSaving) => {
     test.equals(messages.addMessage.getCalls().length, 3); // 3 counted reports, one phone number each.
@@ -247,10 +277,16 @@ exports['adds multiple messages when multiple recipients are evaled'] = test => 
   });
 };
 
-exports['adds message when recipient cannot be evaled'] = test => {
+exports['does not add message when recipient cannot be evaled'] = test => {
   const recipient = 'countedReports[0].contact.phonekkk'; // field doesn't exist
-  sinon.stub(config, 'get').returns(
-    [_.defaults({ recipients: [recipient]} , alert)]);
+  alert.recipients = [recipient];
+  sinon.stub(config, 'get').returns([alert]);
+
+  sinon.stub(utils, 'getReportsWithinTimeWindow').returns(Promise.resolve(reports));
+  stubFetchHydratedDocs();
+  sinon.spy(vm, 'runInNewContext'); // spy, not stub, to pass through
+  sinon.stub(messages, 'addError');
+  sinon.stub(messages, 'addMessage');
 
   transition.onMatch({ doc: doc }, undefined, undefined, (err, docNeedsSaving) => {
     test.equals(messages.addError.getCalls().length, 1);
@@ -263,8 +299,14 @@ exports['adds message when recipient cannot be evaled'] = test => {
 
 exports['does not add message when recipient is bad'] = test => {
   const recipient = 'ssdfds';
-  sinon.stub(config, 'get').returns(
-    [_.defaults({ recipients: [recipient]} , alert)]);
+  alert.recipients = [recipient];
+  sinon.stub(config, 'get').returns([alert]);
+
+  sinon.stub(utils, 'getReportsWithinTimeWindow').returns(Promise.resolve(reports));
+  stubFetchHydratedDocs();
+  sinon.spy(vm, 'runInNewContext'); // spy, not stub, to pass through
+  sinon.stub(messages, 'addError');
+  sinon.stub(messages, 'addMessage');
 
   transition.onMatch({ doc: doc }, undefined, undefined, (err, docNeedsSaving) => {
     test.equals(messages.addMessage.getCalls().length, 0);
@@ -276,7 +318,15 @@ exports['does not add message when recipient is bad'] = test => {
 };
 
 exports['does not add message when recipient is not international phone number'] = test => {
-  sinon.stub(config, 'get').returns([_.defaults({ recipients: ['0623456789']} , alert)]);
+  const recipient = '0623456789';
+  alert.recipients = [recipient];
+  sinon.stub(config, 'get').returns([alert]);
+
+  sinon.stub(utils, 'getReportsWithinTimeWindow').returns(Promise.resolve(reports));
+  stubFetchHydratedDocs();
+  sinon.spy(vm, 'runInNewContext'); // spy, not stub, to pass through
+  sinon.stub(messages, 'addError');
+  sinon.stub(messages, 'addMessage');
 
   transition.onMatch({ doc: doc }, undefined, undefined, (err, docNeedsSaving) => {
     test.equals(messages.addMessage.getCalls().length, 0);
@@ -288,21 +338,25 @@ exports['does not add message when recipient is not international phone number']
 };
 
 exports['adds multiple messages when mutiple recipients'] = test => {
-  var alertMultipleRecipients = _.defaults({
-    recipients: ['+254111222333', 'countedReports.map(report => report.contact.phone)']},
-    alert);
-  sinon.stub(config, 'get').returns([alertMultipleRecipients]);
+  alert.recipients = ['+254111222333', 'countedReports.map(report => report.contact.phone)'];
+  sinon.stub(config, 'get').returns([alert]);
+
+  sinon.stub(utils, 'getReportsWithinTimeWindow').returns(Promise.resolve(reports));
+  stubFetchHydratedDocs();
+  sinon.spy(vm, 'runInNewContext'); // spy, not stub, to pass through
+  sinon.stub(messages, 'addError');
+  sinon.stub(messages, 'addMessage');
 
   transition.onMatch({ doc: doc }, undefined, undefined, () => {
     test.equals(vm.runInNewContext.getCalls().length, 4); // 3 reports to count + eval the recipient.
     test.equals(messages.addError.getCalls().length, 0);
 
     // first recipient
-    assertMessage(test, messages.addMessage.getCall(0), '+254111222333', alert.message);
+    assertMessage(test, messages.addMessage.getCall(0).args[0], '+254111222333', alert.message);
     // second recipient : matched 3 phones
-    assertMessage(test, messages.addMessage.getCall(1), doc.contact.phone, alert.message);
-    assertMessage(test, messages.addMessage.getCall(2), hydratedReports[0].contact.phone, alert.message);
-    assertMessage(test, messages.addMessage.getCall(3), hydratedReports[1].contact.phone, alert.message);
+    assertMessage(test, messages.addMessage.getCall(1).args[0], doc.contact.phone, alert.message);
+    assertMessage(test, messages.addMessage.getCall(2).args[0], hydratedReports[0].contact.phone, alert.message);
+    assertMessage(test, messages.addMessage.getCall(3).args[0], hydratedReports[1].contact.phone, alert.message);
 
     test.equals(messages.addMessage.getCalls().length, 4);
 
@@ -311,10 +365,14 @@ exports['adds multiple messages when mutiple recipients'] = test => {
 };
 
 exports['dedups message recipients'] = test => {
-  var alertMultipleRecipients = _.defaults({
-    recipients: ['countedReports[0].contact.phone', 'countedReports[0].contact.phone']},
-    alert);
-  sinon.stub(config, 'get').returns([alertMultipleRecipients]);
+  alert.recipients = ['countedReports[0].contact.phone', 'countedReports[0].contact.phone'];
+  sinon.stub(config, 'get').returns([alert]);
+
+  sinon.stub(utils, 'getReportsWithinTimeWindow').returns(Promise.resolve(reports));
+  stubFetchHydratedDocs();
+  sinon.spy(vm, 'runInNewContext'); // spy, not stub, to pass through
+  sinon.stub(messages, 'addError');
+  sinon.stub(messages, 'addMessage');
 
   transition.onMatch({ doc: doc }, undefined, undefined, () => {
     test.equals(messages.addError.getCalls().length, 0);
@@ -328,7 +386,6 @@ exports['dedups message recipients'] = test => {
 
 exports['when unexpected error, callback returns (error, false)'] = test => {
   sinon.stub(config, 'get').returns([alert]);
-  utils.getReportsWithinTimeWindow.restore();
   sinon.stub(utils, 'getReportsWithinTimeWindow').throws(new Error('much error'));
 
   transition.onMatch({ doc: doc }, undefined, undefined, (err, docNeedsSaving) => {
@@ -355,15 +412,20 @@ exports['runs multiple alerts'] = test => {
     timeWindowInDays : 5
   }];
   sinon.stub(config, 'get').returns(twoAlerts);
+  sinon.stub(utils, 'getReportsWithinTimeWindow').returns(Promise.resolve(reports));
+  stubFetchHydratedDocs();
+  sinon.spy(vm, 'runInNewContext'); // spy, not stub, to pass through
+  sinon.stub(messages, 'addError');
+  sinon.stub(messages, 'addMessage');
 
   transition.onMatch({ doc: doc }, undefined, undefined, (err, docNeedsSaving) => {
     test.equals(vm.runInNewContext.getCalls().length, 6); // (reportsWithingTimeWindow + report) * 2
     test.equals(messages.addError.getCalls().length, 0);
 
     test.equals(messages.addMessage.getCalls().length, 3); // alert[0].recipients + alert[1].recipients
-    assertMessage(test, messages.addMessage.getCalls()[0], twoAlerts[0].recipients[0], twoAlerts[0].message);
-    assertMessage(test, messages.addMessage.getCalls()[1], twoAlerts[1].recipients[0], twoAlerts[1].message);
-    assertMessage(test, messages.addMessage.getCalls()[2], twoAlerts[1].recipients[1], twoAlerts[1].message);
+    assertMessage(test, messages.addMessage.getCall(0).args[0], twoAlerts[0].recipients[0], twoAlerts[0].message);
+    assertMessage(test, messages.addMessage.getCall(1).args[0], twoAlerts[1].recipients[0], twoAlerts[1].message);
+    assertMessage(test, messages.addMessage.getCall(2).args[0], twoAlerts[1].recipients[1], twoAlerts[1].message);
 
     test.ok(!err);
     test.ok(docNeedsSaving);
@@ -372,7 +434,14 @@ exports['runs multiple alerts'] = test => {
 };
 
 exports['skips doc with wrong form if forms is present in config'] = test => {
-  sinon.stub(config, 'get').returns([_.extend({forms: ['B']} , alert)]);
+  alert.forms = ['B'];
+  sinon.stub(config, 'get').returns([alert]);
+
+  sinon.stub(utils, 'getReportsWithinTimeWindow').returns(Promise.resolve(reports));
+  stubFetchHydratedDocs();
+  sinon.spy(vm, 'runInNewContext'); // spy, not stub, to pass through
+  sinon.stub(messages, 'addError');
+  sinon.stub(messages, 'addMessage');
 
   transition.onMatch({ doc: doc }, undefined, undefined, (err, docNeedsSaving) => {
     test.equals(messages.addError.getCalls().length, 0);

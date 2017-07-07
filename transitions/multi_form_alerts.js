@@ -12,7 +12,7 @@ const hasRun = (doc) => Boolean(
   doc.transitions.multi_form_alerts
 );
 
-const getAlerts = () => config.get('multi_form_alerts');
+const getAlertConfig = () => config.get('multi_form_alerts');
 
 /* Returned list does not include the change.doc. */
 const fetchReports = (latestTimestamp, timeWindowInDays, formTypes) => {
@@ -26,6 +26,7 @@ const fetchReports = (latestTimestamp, timeWindowInDays, formTypes) => {
     .then(hydrateDocs);
 };
 
+// This is inefficient. Implement a bulk fetch : https://github.com/medic/medic-webapp/issues/3631
 const hydrateDocs = (docs) => {
   const fetchedDocsPromise = docs.reduce(function(promise, doc) {
     return promise.then((fetchedDocs) => {
@@ -45,10 +46,8 @@ const countReports = (reports, isReportCountedString) => {
     try {
       return vm.runInNewContext('(' + isReportCountedString + ')(report, latestReport)', context);
     } catch(err) {
-      logger.error('Could not eval "isReportCounted" function for (report=' + context.report._id + ', latestReport=' + context.latestReport._id +
-        '). Report will not be counted. Function passed: "' +
-        isReportCountedString + '". Error: ' +
-        err.message);
+      logger.error(`Could not eval "isReportCounted" function for (report=${context.report._id}, latestReport=${context.latestReport._id}` +
+        `). Report will not be counted. Function passed: "${isReportCountedString}". Error: ${err.message}`);
       return false;
     }
   });
@@ -105,18 +104,17 @@ const getPhonesWithDuplicates = (recipients, countedReports) => {
       if (_.isArray(evaled)) {
         return evaled.map((shouldBeAString) => {
           if (!_.isString(shouldBeAString)) {
-            return { error: 'multi_form_alerts : one of the phone numbers for "' + recipient +
-              '" is not a string. Message will not be sent. Found : ' + JSON.stringify(shouldBeAString) };
+            return { error: `multi_form_alerts : one of the phone numbers for "${recipient}"` +
+              ` is not a string. Message will not be sent. Found : ${JSON.stringify(shouldBeAString)}` };
           }
           return shouldBeAString;
         });
       }
-      return { error: 'multi_form_alerts : phone number for "' + recipient +
-        '" is not a string or array of strings. Message will not be sent. Found: "' +
-        JSON.stringify(evaled) + '"' };
+      return { error: `multi_form_alerts : phone number for "${recipient}"` +
+        ` is not a string or array of strings. Message will not be sent. Found: "${JSON.stringify(evaled)}"` };
     } catch(err) {
-      return { error: 'multi_form_alerts : Could not find a phone number for "' + recipient +
-        '". Message will not be sent. Error: "' + err.message + '"' };
+      return { error: `multi_form_alerts : Could not find a phone number for "${recipient}".` +
+        `Message will not be sent. Error: "${err.message}"` };
     }
   };
 
@@ -138,8 +136,8 @@ const validateConfig = (alert) => {
       !alert.message ||
       !alert.recipients ||
       !alert.timeWindowInDays) {
-    throw new Error('Bad config for multi_form_alerts. Expecting fields isReportCounted, ' +
-      'numReportsThreshold, message, recipients, timeWindowInDays. Found ' + JSON.stringify(alert));
+    throw new Error(`Bad config for multi_form_alerts. Expecting fields isReportCounted, ` +
+      `numReportsThreshold, message, recipients, timeWindowInDays. Found ${JSON.stringify(alert)}`);
   }
   alert.timeWindowInDays = parseInt(alert.timeWindowInDays);
   if (isNaN(alert.timeWindowInDays)) {
@@ -181,11 +179,11 @@ const runOneAlert = (alert, latestReport) => {
 
 const onMatch = (change, db, audit, callback) => {
   const latestReport = change.doc;
-  const alerts = getAlerts();
+  const alertConfig = getAlertConfig();
   const errors = [];
   let docNeedsSaving = false;
   let promiseSeries = Promise.resolve();
-  alerts.forEach((alert) => {
+  alertConfig.forEach((alert) => {
     promiseSeries = promiseSeries.then(() => {
       validateConfig(alert);
       return runOneAlert(alert, latestReport)
