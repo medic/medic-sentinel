@@ -125,7 +125,9 @@ const loadTransitions = (autoEnableSystemTransitions = true) => {
       return logger.warn(`transition ${transition} is disabled`);
     }
 
-    self._loadTransition(transition);
+    // Needed to support tests mocking out _loadTransition, and _loadTransition
+    // not being available in prod.
+    (self._loadTransition || self.loadTransition)(transition);
   });
 
   // Warn if there are configured transitions that are not available
