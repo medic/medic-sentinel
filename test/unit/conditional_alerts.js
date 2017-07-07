@@ -9,18 +9,6 @@ exports.tearDown = function(callback) {
     callback();
 };
 
-exports['onMatch signature'] = function(test) {
-    test.ok(_.isFunction(transition.onMatch));
-    test.equals(transition.onMatch.length, 4);
-    test.done();
-};
-
-exports['filter signature'] = function(test) {
-    test.ok(_.isFunction(transition.filter));
-    test.equals(transition.filter.length, 1);
-    test.done();
-};
-
 exports['when document type is unknown do not pass filter'] = function(test) {
     test.equals(transition.filter({}), false);
     test.done();

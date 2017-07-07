@@ -8,11 +8,6 @@ exports.setUp = function(callback) {
     callback();
 };
 
-exports['onMatch is a function'] = function(test) {
-    test.ok(_.isFunction(transition.onMatch));
-    test.done();
-};
-
 exports['calls db.get with id of clinic'] = function(test) {
     test.expect(2);
     var db = {
