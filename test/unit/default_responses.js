@@ -1,5 +1,4 @@
-var _ = require('underscore'),
-    sinon = require('sinon').sandbox.create(),
+var sinon = require('sinon').sandbox.create(),
     config = require('../../config'),
     utils = require('../../lib/utils'),
     messages = require('../../lib/messages'),

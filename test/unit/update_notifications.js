@@ -1,5 +1,4 @@
-var _ = require('underscore'),
-    sinon = require('sinon').sandbox.create(),
+var sinon = require('sinon').sandbox.create(),
     transition = require('../../transitions/update_notifications'),
     utils = require('../../lib/utils');
 

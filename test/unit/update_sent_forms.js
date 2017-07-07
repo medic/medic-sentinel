@@ -1,5 +1,4 @@
-var _ = require('underscore'),
-    moment = require('moment'),
+var moment = require('moment'),
     sinon = require('sinon'),
     transition = require('../../transitions/update_sent_forms');
 
