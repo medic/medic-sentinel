@@ -26,13 +26,11 @@ exports.setUp = callback => {
 };
 
 const stubFetchHydratedDocs = () => {
-  sinon.stub(lineage, 'fetchHydratedDocPromise').callsFake(id => {
-    if (id === doc._id) { return Promise.resolve(doc); }
-    if (id === reports[0]._id) { return Promise.resolve(hydratedReports[0]); }
-    if (id === reports[1]._id) { return Promise.resolve(hydratedReports[1]); }
-  });
+  sinon.stub(lineage, 'fetchHydratedDocPromise')
+    .withArgs(doc._id).returns(Promise.resolve(doc))
+    .withArgs(reports[0]._id).returns(Promise.resolve(hydratedReports[0]))
+    .withArgs(reports[1]._id).returns(Promise.resolve(hydratedReports[1]));
 };
-
 
 // doc is hydrated before being passed to the transition.
 const doc = {
@@ -125,7 +123,7 @@ exports['validates config : timeWindowInDays'] = test => {
 exports['fetches reports within time window'] = test => {
   sinon.stub(config, 'get').returns([alert]);
   sinon.stub(utils, 'getReportsWithinTimeWindow').returns(Promise.resolve(reports));
-
+  stubFetchHydratedDocs();
   transition.onMatch({ doc: doc }, undefined, undefined, () => {
     test.equals(utils.getReportsWithinTimeWindow.callCount, 1);
     test.equals(utils.getReportsWithinTimeWindow.args[0][0], 12344);
