@@ -380,15 +380,20 @@ const attach = () => {
   });
 };
 
+const availableTransitions = () => {
+  return AVAILABLE_TRANSITIONS;
+};
+
 module.exports = {
   _loadTransition: loadTransition,
   _changeQueue: changeQueue,
+  availableTransitions: availableTransitions,
   loadTransitions: loadTransitions,
   canRun: canRun,
   attach: attach,
   finalize: finalize,
   applyTransition: applyTransition,
-  applyTransitions: applyTransitions
+  applyTransitions: applyTransitions,
 };
 
 if (!process.env.TEST_ENV) {
