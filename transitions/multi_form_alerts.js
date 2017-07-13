@@ -142,10 +142,10 @@ const validateConfig = (alert) => {
   }
 };
 
-const count = (alert, latestReport) => {
+const getReports = (alert, latestReport) => {
   return new Promise((resolve, reject) => {
     const script = vm.createScript(`(${alert.isReportCounted})(report, latestReport)`);
-    let total = countReports([ latestReport ], latestReport, script);
+    let reports = countReports([ latestReport ], latestReport, script);
     let skip = 0;
     async.doWhilst(
       callback => {
@@ -156,7 +156,7 @@ const count = (alert, latestReport) => {
       },
       fetched => {
         const countedReports = countReports(fetched, latestReport, script);
-        total = total.concat(countedReports);
+        reports = reports.concat(countedReports);
         skip += BATCH_SIZE;
         return fetched.length === BATCH_SIZE;
       },
@@ -164,7 +164,7 @@ const count = (alert, latestReport) => {
         if (err) {
           return reject(err);
         }
-        resolve(total);
+        resolve(reports);
       }
     );
   });
@@ -175,9 +175,9 @@ const runOneAlert = (alert, latestReport) => {
   if (alert.forms && alert.forms.length && !alert.forms.includes(latestReport.form)) {
     return Promise.resolve(false);
   }
-  return count(alert, latestReport).then(total => {
-    if (total.length >= alert.numReportsThreshold) {
-      return generateMessages(alert.recipients, alert.message, total);
+  return getReports(alert, latestReport).then(reports => {
+    if (reports.length >= alert.numReportsThreshold) {
+      return generateMessages(alert.recipients, alert.message, reports);
     }
     return false;
   });
