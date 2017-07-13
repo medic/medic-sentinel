@@ -134,31 +134,34 @@ const getPhonesWithDuplicates = (recipients, countedReports) => {
 
 const validateConfig = () => {
   const alertConfig = getAlertConfig();
-  alertConfig.forEach(alert => {
+  const errors = [];
+  alertConfig.forEach((alert, idx) => {
     requiredFields.forEach(field => {
       if (!alert[field]) {
-        throw new Error(`Bad config for multi_form_alerts. Expecting fields: ${requiredFields.join(', ')}`);
+        errors.push(`Alert number ${idx}, expecting fields: ${requiredFields.join(', ')}`);
       }
     });
     alert.timeWindowInDays = parseInt(alert.timeWindowInDays);
     if (isNaN(alert.timeWindowInDays)) {
-      throw new Error('Bad config for multi_form_alerts. Expecting "timeWindowInDays" to be an integer. ' +
-        'E.g "timeWindowInDays": "3"');
+      errors.push(`Alert number ${idx}, expecting "timeWindowInDays" to be an integer, eg: "timeWindowInDays": "3"`);
     }
     alert.numReportsThreshold = parseInt(alert.numReportsThreshold);
     if (isNaN(alert.numReportsThreshold)) {
-      throw new Error('Bad config for multi_form_alerts. Expecting "numReportsThreshold" to be an integer. ' +
-        'E.g "numReportsThreshold": "3"');
+      errors.push(`Alert number ${idx}, expecting "numReportsThreshold" to be an integer, eg: "numReportsThreshold": "3"`);
     }
     if(!_.isArray(alert.recipients)) {
-      throw new Error('Bad config for multi_form_alerts. Expecting "recipients" to be an array of strings. ' +
-        'E.g "recipients": ["+9779841452277", "countedReports[0].contact.phone"]');
+      errors.push(`Alert number ${idx}, expecting "recipients" to be an array of strings, eg: "recipients": ["+9779841452277", "countedReports[0].contact.phone"]`);
     }
     if (alert.forms && (!_.isArray(alert.forms))) {
       alert.forms = null;
-      logger.warn('Bad config for multi_form_alerts. Expecting "forms" to be an array of form codes. Continuing without "forms", since it\'s optional.');
+      logger.warn(`Bad config for ${NAME}, alert number ${idx}. Expecting "forms" to be an array of form codes. Continuing without "forms", since it\'s optional.`);
     }
   });
+  if (errors.length) {
+    logger.error(`Validation failed for ${NAME} transition`);
+    logger.error(errors.join('\n'));
+    throw new Error(`Validation failed for ${NAME} transition`);
+  }
 };
 
 /* Return true if the doc has been changed. */
