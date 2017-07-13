@@ -6,7 +6,14 @@ const vm = require('vm'),
       messages = require('../lib/messages'),
       utils = require('../lib/utils'),
       transitionUtils = require('./utils'),
-      NAME = 'multi_form_alerts';
+      NAME = 'multi_form_alerts',
+      requiredFields = [
+        'isReportCounted',
+        'numReportsThreshold',
+        'message',
+        'recipients',
+        'timeWindowInDays'
+      ];
 
 const getAlertConfig = () => config.get('multi_form_alerts');
 
@@ -39,7 +46,7 @@ const countReports = (reports, isReportCountedString) => {
   return reports.filter((report) => {
     const context = { report: report, latestReport: reports[0]};
     try {
-      return vm.runInNewContext('(' + isReportCountedString + ')(report, latestReport)', context);
+      return vm.runInNewContext(`(${isReportCountedString})(report, latestReport)`, context);
     } catch(err) {
       logger.error(`Could not eval "isReportCounted" function for (report=${context.report._id}, latestReport=${context.latestReport._id}` +
         `). Report will not be counted. Function passed: "${isReportCountedString}". Error: ${err.message}`);
@@ -125,33 +132,33 @@ const getPhonesWithDuplicates = (recipients, countedReports) => {
   return getPhonesOneRecipient(recipients, countedReports);
 };
 
-const validateConfig = (alert) => {
-  if (!alert.isReportCounted ||
-      !alert.numReportsThreshold ||
-      !alert.message ||
-      !alert.recipients ||
-      !alert.timeWindowInDays) {
-    throw new Error(`Bad config for multi_form_alerts. Expecting fields isReportCounted, ` +
-      `numReportsThreshold, message, recipients, timeWindowInDays. Found ${JSON.stringify(alert)}`);
-  }
-  alert.timeWindowInDays = parseInt(alert.timeWindowInDays);
-  if (isNaN(alert.timeWindowInDays)) {
-    throw new Error('Bad config for multi_form_alerts. Expecting "timeWindowInDays" to be an integer. ' +
-      'E.g "timeWindowInDays": "3"');
-  }
-  alert.numReportsThreshold = parseInt(alert.numReportsThreshold);
-  if (isNaN(alert.numReportsThreshold)) {
-    throw new Error('Bad config for multi_form_alerts. Expecting "numReportsThreshold" to be an integer. ' +
-      'E.g "numReportsThreshold": "3"');
-  }
-  if(!_.isArray(alert.recipients)) {
-    throw new Error('Bad config for multi_form_alerts. Expecting "recipients" to be an array of strings. ' +
-      'E.g "recipients": ["+9779841452277", "countedReports[0].contact.phone"]');
-  }
-  if (alert.forms && (!_.isArray(alert.forms))) {
-    alert.forms = null;
-    logger.warn('Bad config for multi_form_alerts. Expecting "forms" to be an array of form codes. Continuing without "forms", since it\'s optional.');
-  }
+const validateConfig = () => {
+  const alertConfig = getAlertConfig();
+  alertConfig.forEach(alert => {
+    requiredFields.forEach(field => {
+      if (!alert[field]) {
+        throw new Error(`Bad config for multi_form_alerts. Expecting fields: ${requiredFields.join(', ')}`);
+      }
+    });
+    alert.timeWindowInDays = parseInt(alert.timeWindowInDays);
+    if (isNaN(alert.timeWindowInDays)) {
+      throw new Error('Bad config for multi_form_alerts. Expecting "timeWindowInDays" to be an integer. ' +
+        'E.g "timeWindowInDays": "3"');
+    }
+    alert.numReportsThreshold = parseInt(alert.numReportsThreshold);
+    if (isNaN(alert.numReportsThreshold)) {
+      throw new Error('Bad config for multi_form_alerts. Expecting "numReportsThreshold" to be an integer. ' +
+        'E.g "numReportsThreshold": "3"');
+    }
+    if(!_.isArray(alert.recipients)) {
+      throw new Error('Bad config for multi_form_alerts. Expecting "recipients" to be an array of strings. ' +
+        'E.g "recipients": ["+9779841452277", "countedReports[0].contact.phone"]');
+    }
+    if (alert.forms && (!_.isArray(alert.forms))) {
+      alert.forms = null;
+      logger.warn('Bad config for multi_form_alerts. Expecting "forms" to be an array of form codes. Continuing without "forms", since it\'s optional.');
+    }
+  });
 };
 
 /* Return true if the doc has been changed. */
@@ -178,9 +185,8 @@ const onMatch = (change, db, audit, callback) => {
   const errors = [];
   let docNeedsSaving = false;
   let promiseSeries = Promise.resolve();
-  alertConfig.forEach((alert) => {
+  alertConfig.forEach(alert => {
     promiseSeries = promiseSeries.then(() => {
-      validateConfig(alert);
       return runOneAlert(alert, latestReport)
         .then((isDocChangedByOneAlert) => {
           docNeedsSaving = docNeedsSaving || isDocChangedByOneAlert;
@@ -208,5 +214,6 @@ module.exports = {
     doc.type === 'data_record' &&
     !transitionUtils.hasRun(doc, NAME)
   ),
-  onMatch: onMatch
+  onMatch: onMatch,
+  init: validateConfig
 };
