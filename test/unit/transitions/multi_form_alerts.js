@@ -17,9 +17,9 @@ exports.setUp = callback => {
   // reset alert
   alert = {
     isReportCounted: 'function() { return true; }',
-    numReportsThreshold : 3,
-    message : 'hi',
-    recipients : ['+254777888999'],
+    numReportsThreshold: 3,
+    message: 'hi',
+    recipients: ['+254777888999'],
     timeWindowInDays : 7
   };
   callback();
@@ -133,9 +133,9 @@ exports['filters reports by form if forms is present in config'] = test => {
 };
 
 exports['if not enough reports pass the isReportCounted func, does nothing'] = test => {
+  alert.isReportCounted = 'function() { return false; }';
   sinon.stub(config, 'get').returns([alert]);
   sinon.stub(utils, 'getReportsWithinTimeWindow').returns(Promise.resolve(reports));
-  alert.isReportCounted = 'function() { return false; }';
   stubFetchHydratedDocs();
   sinon.stub(messages, 'addError');
   sinon.stub(messages, 'addMessage');
