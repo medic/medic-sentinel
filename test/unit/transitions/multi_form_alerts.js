@@ -7,14 +7,15 @@ const _ = require('underscore'),
       utils = require('../../../lib/utils'),
       vm = require('vm');
 
+let alert;
+
 exports.tearDown = callback => {
   sinon.restore();
   callback();
 };
 
-let alert;
 exports.setUp = callback => {
-  // reset alert.
+  // reset alert
   alert = {
     isReportCounted: 'function() { return true; }',
     numReportsThreshold : 3,
@@ -26,10 +27,7 @@ exports.setUp = callback => {
 };
 
 const stubFetchHydratedDocs = () => {
-  sinon.stub(lineage, 'fetchHydratedDoc')
-    .withArgs(doc._id).returns(Promise.resolve(doc))
-    .withArgs(reports[0]._id).returns(Promise.resolve(hydratedReports[0]))
-    .withArgs(reports[1]._id).returns(Promise.resolve(hydratedReports[1]));
+  sinon.stub(lineage, 'hydrateDocs').returns(Promise.resolve(hydratedReports));
 };
 
 // doc is hydrated before being passed to the transition.
@@ -126,11 +124,11 @@ exports['fetches reports within time window'] = test => {
 exports['filters reports by form if forms is present in config'] = test => {
   sinon.stub(config, 'get').returns([_.extend({forms: ['A']} , alert)]);
   sinon.stub(utils, 'getReportsWithinTimeWindow').returns(Promise.resolve(reports));
-  stubFetchHydratedDocs();
+  sinon.stub(lineage, 'hydrateDocs').returns(Promise.resolve([hydratedReports[0]]));
   sinon.spy(vm, 'runInNewContext'); // spy, not stub, to pass through
 
   transition.onMatch({ doc: doc }, undefined, undefined, () => {
-    const countedReports = vm.runInNewContext.getCalls().map((call) => call.args[1].report);
+    const countedReports = vm.runInNewContext.getCalls().map(call => call.args[1].report);
     test.equals(countedReports.length, 2);
     test.equals(countedReports[0]._id, doc._id);
     test.equals(countedReports[1]._id, reports[0]._id);
@@ -160,7 +158,6 @@ exports['if not enough reports pass the isReportCounted func, does nothing'] = t
   sinon.stub(messages, 'addError');
   sinon.stub(messages, 'addMessage');
 
-
   transition.onMatch({ doc: doc }, undefined, undefined, () => {
     test.equals(vm.runInNewContext.getCalls().length, alert.numReportsThreshold); // 3
     test.equals(messages.addError.getCalls().length, 0);
@@ -173,7 +170,7 @@ exports['if no reports in time window, does nothing'] = test => {
   sinon.stub(config, 'get').returns([alert]);
   // No reports
   sinon.stub(utils, 'getReportsWithinTimeWindow').returns(Promise.resolve([]));
-  stubFetchHydratedDocs();
+  sinon.stub(lineage, 'hydrateDocs').returns(Promise.resolve([]));
   sinon.spy(vm, 'runInNewContext'); // spy, not stub, to pass through
   sinon.stub(messages, 'addError');
   sinon.stub(messages, 'addMessage');
@@ -187,12 +184,12 @@ exports['if no reports in time window, does nothing'] = test => {
 };
 
 const assertMessage = (test, messageArgs, recipient, message) => {
-    test.deepEqual(messageArgs, {
-      doc: doc,
-      phone: recipient,
-      message: message,
-      options: { countedReports: [doc, ...hydratedReports] }
-    });
+  test.deepEqual(messageArgs, {
+    doc: doc,
+    phone: recipient,
+    message: message,
+    options: { countedReports: [doc, ...hydratedReports] }
+  });
 };
 
 const assertMessages = (test, addMessageStub, alert) => {

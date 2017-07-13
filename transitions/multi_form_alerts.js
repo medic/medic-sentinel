@@ -19,19 +19,7 @@ const fetchReports = (latestTimestamp, timeWindowInDays, formTypes) => {
       }
       return reports;
     })
-    .then(hydrateDocs);
-};
-
-const hydrateDocs = (docs) => {
-  return docs.reduce(function(promise, doc) {
-    return promise.then((fetchedDocs) => {
-      return lineage.fetchHydratedDoc(doc._id)
-        .then(fetchedDoc => {
-          fetchedDocs.push(fetchedDoc);
-          return fetchedDocs;
-        });
-    });
-  }, Promise.resolve([]));
+    .then(lineage.hydrateDocs);
 };
 
 const countReports = (reports, isReportCountedString) => {
