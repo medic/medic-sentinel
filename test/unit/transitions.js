@@ -8,8 +8,9 @@ const sinon = require('sinon').sandbox.create(),
       transitions = require('../../transitions');
 
 exports.tearDown = callback => {
-  sinon.restore();
   transitions._changeQueue.kill();
+  transitions._detach();
+  sinon.restore();
   callback();
 };
 
@@ -186,7 +187,7 @@ exports['loadTransitions loads system transitions by default'] = test => {
   test.done();
 };
 
-exports['loadTransitions doesnt load system transistions that have been explicitly disabled'] = test => {
+exports['loadTransitions does not load system transistions that have been explicitly disabled'] = test => {
   sinon.stub(config, 'get').returns({maintain_info_document: {disable: true}});
   const stub = sinon.stub(transitions, '_loadTransition');
   transitions.loadTransitions();
@@ -203,7 +204,7 @@ exports['attach handles missing meta data doc'] = test => {
   const insert = sinon.stub(db.medic, 'insert').callsArg(1);
   const on = sinon.stub();
   const start = sinon.stub();
-  const feed = sinon.stub(follow, 'Feed').returns({ on: on, follow: start });
+  const feed = sinon.stub(follow, 'Feed').returns({ on: on, follow: start, stop: () => {} });
   const applyTransitions = sinon.stub(transitions, 'applyTransitions').callsArg(1);
   sinon.stub(audit, 'withNano');
   // wait for the queue processor
@@ -219,11 +220,12 @@ exports['attach handles missing meta data doc'] = test => {
     test.equal(insert.args[0][0].processed_seq, 55);
     test.done();
   };
-  transitions.attach();
+  transitions._attach();
   test.equal(feed.callCount, 1);
   test.equal(feed.args[0][0].since, 0);
-  test.equal(on.callCount, 1);
+  test.equal(on.callCount, 2);
   test.equal(on.args[0][0], 'change');
+  test.equal(on.args[1][0], 'error');
   test.equal(start.callCount, 1);
   // invoke the change handler
   on.args[0][1]({ id: 'abc', seq: 55 });
@@ -236,7 +238,7 @@ exports['attach handles existing meta data doc'] = test => {
   const insert = sinon.stub(db.medic, 'insert').callsArg(1);
   const on = sinon.stub();
   const start = sinon.stub();
-  const feed = sinon.stub(follow, 'Feed').returns({ on: on, follow: start });
+  const feed = sinon.stub(follow, 'Feed').returns({ on: on, follow: start, stop: () => {} });
   const applyTransitions = sinon.stub(transitions, 'applyTransitions').callsArg(1);
   sinon.stub(audit, 'withNano');
   // wait for the queue processor
@@ -252,11 +254,12 @@ exports['attach handles existing meta data doc'] = test => {
     test.equal(insert.args[0][0].processed_seq, 55);
     test.done();
   };
-  transitions.attach();
+  transitions._attach();
   test.equal(feed.callCount, 1);
   test.equal(feed.args[0][0].since, 22);
-  test.equal(on.callCount, 1);
+  test.equal(on.callCount, 2);
   test.equal(on.args[0][0], 'change');
+  test.equal(on.args[1][0], 'error');
   test.equal(start.callCount, 1);
   // invoke the change handler
   on.args[0][1]({ id: 'abc', seq: 55 });

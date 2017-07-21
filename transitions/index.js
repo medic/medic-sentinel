@@ -15,6 +15,8 @@ const _ = require('underscore'),
       PROGRESS_REPORT_INTERVAL = 500, // items
       transitions = {};
 
+let feed;
+
 /*
  * Add new transitions here to make them available for configuration and execution.
  *
@@ -112,6 +114,7 @@ const loadTransitions = (autoEnableSystemTransitions = true) => {
 
   const self = module.exports;
   const transitionsConfig = config.get('transitions') || [];
+  let loadError = false;
 
   // Load all system or configured transitions
   AVAILABLE_TRANSITIONS.forEach(transition => {
@@ -126,7 +129,13 @@ const loadTransitions = (autoEnableSystemTransitions = true) => {
       return logger.warn(`transition ${transition} is disabled`);
     }
 
-    self._loadTransition(transition);
+    try {
+      self._loadTransition(transition);
+    } catch(e) {
+      loadError = true;
+      logger.error(`Failed loading transition "${transition}"`);
+      logger.error(e);
+    }
   });
 
   // Warn if there are configured transitions that are not available
@@ -135,20 +144,22 @@ const loadTransitions = (autoEnableSystemTransitions = true) => {
       return logger.warn(`transition ${key} not available.`);
     }
   });
+
+  if (loadError) {
+    logger.error(`Transitions are disabled until the above configuration errors are fixed.`);
+    detach();
+  } else {
+    attach();
+  }
 };
 
 const loadTransition = key => {
-  try {
-    logger.info(`loading transition ${key}`);
-    const transition = require('./' + key);
-    if (transition.init) {
-      transition.init();
-    }
-    transitions[key] = transition;
-  } catch(e) {
-    logger.error(`failed loading transition ${key}`);
-    logger.error(e);
+  logger.info(`Loading transition "${key}"`);
+  const transition = require('./' + key);
+  if (transition.init) {
+    transition.init();
   }
+  transitions[key] = transition;
 };
 
 /*
@@ -353,20 +364,28 @@ const updateMetaData = (seq, callback) =>
     });
   });
 
+const detach = () => {
+  if (feed) {
+    feed.stop();
+    feed = null;
+  }
+};
+
 /*
  *  Setup changes feed listener.
  */
 const attach = () => {
-  // tell everyone we're here
+  if (feed) {
+    return;
+  }
   logger.info('transitions: processing enabled');
-
   getProcessedSeq((err, processedSeq) => {
     if (err) {
       logger.error('transitions: error fetching processed seq', err);
       return;
     }
     logger.info(`transitions: fetching changes feed, starting from ${processedSeq}`);
-    const feed = new follow.Feed({
+    feed = new follow.Feed({
       db: process.env.COUCH_URL,
       since: processedSeq
     });
@@ -380,6 +399,9 @@ const attach = () => {
       }
       changeQueue.push(change);
     });
+    feed.on('error', err => {
+      logger.error('transitions: error from changes feed', err);
+    });
     feed.follow();
   });
 };
@@ -391,15 +413,12 @@ const availableTransitions = () => {
 module.exports = {
   _loadTransition: loadTransition,
   _changeQueue: changeQueue,
+  _attach: attach,
+  _detach: detach,
   availableTransitions: availableTransitions,
   loadTransitions: loadTransitions,
   canRun: canRun,
-  attach: attach,
   finalize: finalize,
   applyTransition: applyTransition,
   applyTransitions: applyTransitions,
 };
-
-if (!process.env.TEST_ENV) {
-  loadTransitions();
-}
