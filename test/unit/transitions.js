@@ -124,56 +124,56 @@ exports['canRun returns true if transition is not defined'] = test => {
   test.done();
 };
 
-exports['loadTransitions loads configured transitions'] = test => {
-  // A list of states to test, first arg is the `transitions` config value and
-  // second is whether you expect loadTransition to get called.
-  const tests = [
-    // empty configuration
-    [{}, false],
-    [undefined, false],
-    [null, false],
-    // falsey configuration
-    [{registration: null}, false],
-    [{registration: undefined}, false],
-    [{registration: false}, false],
-    // transition not available
-    [{foo: true}, false],
-    // available and enabled
-    [{registration: {}}, true],
-    [{registration: true}, true],
-    [{registration: 'x'}, true],
-    [{
-      registration: {
-        param: 'val'
-      }
-    }, true],
-    // support old style
-    [{
-      registration: {
-        load: '../etc/passwd'
-      }
-    }, true],
-    // support old style disable property
-    [{
-      registration: {
-        disable: true
-      }
-    }, false],
-    [{
-      registration: {
-        disable: false
-      }
-    }, true]
-  ];
-  test.expect(tests.length);
-  tests.forEach(t => {
-    sinon.stub(config, 'get').returns(t[0]);
-    const stub = sinon.stub(transitions, '_loadTransition');
+// A list of states to test, first arg is the `transitions` config value and
+// second is whether you expect loadTransition to get called.
+const loadTests = [
+  // empty configuration
+  { name: 'empty', given: {}, expectedCalls: { load: false, attach: true } },
+  { name: 'undefined', given: undefined, expectedCalls: { load: false, attach: true } },
+  { name: 'null', given: null, expectedCalls: { load: false, attach: true } },
+
+  // falsey configuration
+  { name: 'transition null', given: { registration: null }, expectedCalls: { load: false, attach: true } },
+  { name: 'transition undefined', given: { registration: undefined }, expectedCalls: { load: false, attach: true } },
+  { name: 'transition false', given: { registration: false }, expectedCalls: { load: false, attach: true } },
+
+  // invalid configurations
+  { name: 'unknown name', given: { foo: true }, expectedCalls: { load: false, attach: false } },
+
+  // available and enabled
+  { name: 'transition empty', given: { registration: {} }, expectedCalls: { load: true, attach: true } },
+  { name: 'transition true', given: { registration: true }, expectedCalls: { load: true, attach: true } },
+  { name: 'transition string', given: { registration: 'x' }, expectedCalls: { load: true, attach: true } },
+  { name: 'transition object', given: { registration: { param: 'val' } }, expectedCalls: { load: true, attach: true } },
+
+  // support old style
+  { name: 'old style', given: { registration: { load: '../etc/passwd' } }, expectedCalls: { load: true, attach: true } },
+  { name: 'old style true', given: { registration: { disable: true } }, expectedCalls: { load: false, attach: true } },
+  { name: 'old style false', given: { registration: { disable: false } }, expectedCalls: { load: true, attach: true } }
+];
+loadTests.forEach(loadTest => {
+  exports[`loadTransitions loads configured transitions: ${loadTest.name}`] = test => {
+    sinon.stub(config, 'get').returns(loadTest.given);
+    const load = sinon.stub(transitions, '_loadTransition');
+    const attach = sinon.stub(transitions, '_attach');
+    const detach = sinon.stub(transitions, '_detach');
     transitions.loadTransitions(false);
-    test.equal(stub.called, t[1]);
-    stub.restore();
-    config.get.restore();
-  });
+    test.equal(load.callCount, loadTest.expectedCalls.load ? 1 : 0);
+    test.equal(attach.callCount, loadTest.expectedCalls.attach ? 1 : 0);
+    test.equal(detach.callCount, loadTest.expectedCalls.attach ? 0 : 1);
+    test.done();
+  };
+});
+
+exports['loadTransitions load throws detach is called'] = test => {
+  sinon.stub(config, 'get').returns({ registration: true });
+  const load = sinon.stub(transitions, '_loadTransition').throws(new Error('some config error'));
+  const attach = sinon.stub(transitions, '_attach');
+  const detach = sinon.stub(transitions, '_detach');
+  transitions.loadTransitions(false);
+  test.equal(load.callCount, 1);
+  test.equal(attach.callCount, 0);
+  test.equal(detach.callCount, 1);
   test.done();
 };
 
@@ -182,8 +182,6 @@ exports['loadTransitions loads system transitions by default'] = test => {
   const stub = sinon.stub(transitions, '_loadTransition');
   transitions.loadTransitions();
   test.equal(stub.calledWith('maintain_info_document'), true);
-  stub.restore();
-  config.get.restore();
   test.done();
 };
 
@@ -192,8 +190,6 @@ exports['loadTransitions does not load system transistions that have been explic
   const stub = sinon.stub(transitions, '_loadTransition');
   transitions.loadTransitions();
   test.equal(stub.calledWith('maintain_info_document'), false);
-  stub.restore();
-  config.get.restore();
   test.done();
 };
 

@@ -15,7 +15,7 @@ const _ = require('underscore'),
       PROGRESS_REPORT_INTERVAL = 500, // items
       transitions = {};
 
-let feed;
+let changesFeed;
 
 /*
  * Add new transitions here to make them available for configuration and execution.
@@ -126,7 +126,7 @@ const loadTransitions = (autoEnableSystemTransitions = true) => {
     const disabled = conf && conf.disable;
 
     if ((system && disabled) || (!system && !conf || disabled)) {
-      return logger.warn(`transition ${transition} is disabled`);
+      return logger.warn(`Disabled transition "${transition}"`);
     }
 
     try {
@@ -140,16 +140,17 @@ const loadTransitions = (autoEnableSystemTransitions = true) => {
 
   // Warn if there are configured transitions that are not available
   Object.keys(transitionsConfig).forEach(key => {
-    if (AVAILABLE_TRANSITIONS.indexOf(key) === -1) {
-      return logger.warn(`transition ${key} not available.`);
+    if (!AVAILABLE_TRANSITIONS.includes(key)) {
+      loadError = true;
+      logger.error(`Unknown transition "${key}"`);
     }
   });
 
   if (loadError) {
     logger.error(`Transitions are disabled until the above configuration errors are fixed.`);
-    detach();
+    module.exports._detach();
   } else {
-    attach();
+    module.exports._attach();
   }
 };
 
@@ -365,9 +366,9 @@ const updateMetaData = (seq, callback) =>
   });
 
 const detach = () => {
-  if (feed) {
-    feed.stop();
-    feed = null;
+  if (changesFeed) {
+    changesFeed.stop();
+    changesFeed = null;
   }
 };
 
@@ -375,7 +376,7 @@ const detach = () => {
  *  Setup changes feed listener.
  */
 const attach = () => {
-  if (feed) {
+  if (changesFeed) {
     return;
   }
   logger.info('transitions: processing enabled');
@@ -385,11 +386,11 @@ const attach = () => {
       return;
     }
     logger.info(`transitions: fetching changes feed, starting from ${processedSeq}`);
-    feed = new follow.Feed({
+    changesFeed = new follow.Feed({
       db: process.env.COUCH_URL,
       since: processedSeq
     });
-    feed.on('change', change => {
+    changesFeed.on('change', change => {
       // skip uninteresting documents
       if (change.deleted ||
           change.id.match(/^_design\//) ||
@@ -399,10 +400,10 @@ const attach = () => {
       }
       changeQueue.push(change);
     });
-    feed.on('error', err => {
+    changesFeed.on('error', err => {
       logger.error('transitions: error from changes feed', err);
     });
-    feed.follow();
+    changesFeed.follow();
   });
 };
 
