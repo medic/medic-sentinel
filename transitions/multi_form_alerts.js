@@ -44,9 +44,8 @@ const countReports = (reports, latestReport, script) => {
   });
 };
 
-const generateMessages = (alert, countedReports) => {
+const generateMessages = (alert, phones, countedReports) => {
   let isLatestReportChanged = false;
-  const phones = getPhones(alert.recipients, countedReports);
   phones.forEach((phone) => {
     if (phone.error) {
       logger.error(phone.error);
@@ -78,16 +77,15 @@ const generateMessages = (alert, countedReports) => {
 // Recipients format examples:
 // [
 //    '+254777888999',
-//    'countedReports[0].contact.parent.parent.contact.phone',   // returns string
-//    'countedReports[0].contact.parent.parent.alertRecipients', // returns string array
-//    'countedReports.map((report) => report.contact.phone)'     // returns string array
+//    'countedReport.contact.parent.parent.contact.phone',   // returns string
+//    'countedReport.contact.parent.parent.alertRecipients', // returns string array
 // ]
-const getPhones = (recipients, countedReports) => {
-  return _.uniq(getPhonesWithDuplicates(recipients, countedReports));
+const getPhones = (recipients, countedReport) => {
+  return _.uniq(getPhonesWithDuplicates(recipients, countedReport));
 };
 
-const getPhonesWithDuplicates = (recipients, countedReports) => {
-  const getPhonesOneRecipient = (recipient, countedReports) => {
+const getPhonesWithDuplicates = (recipients, countedReport) => {
+  const getPhonesOneRecipient = (recipient, countedReport) => {
     if (!recipient) {
       return [];
     }
@@ -96,7 +94,7 @@ const getPhonesWithDuplicates = (recipients, countedReports) => {
       return [recipient];
     }
 
-    const context = { countedReports: countedReports };
+    const context = { countedReport: countedReport };
     try {
       const evaled = vm.runInNewContext(recipient, context);
       if (_.isString(evaled)) {
@@ -125,10 +123,10 @@ const getPhonesWithDuplicates = (recipients, countedReports) => {
 
   if (_.isArray(recipients)) {
     return _.flatten(
-      recipients.map(_.partial(getPhonesOneRecipient, _, countedReports)));
+      recipients.map(_.partial(getPhonesOneRecipient, _, countedReport)));
   }
 
-  return getPhonesOneRecipient(recipients, countedReports);
+  return getPhonesOneRecipient(recipients, countedReport);
 };
 
 const validateConfig = () => {
@@ -169,32 +167,59 @@ const validateConfig = () => {
   }
 };
 
-const getFilteredReports = (alert, latestReport) => {
+/**
+ * Returns { countedReports, phones }.
+ */
+const getCountedReportsAndPhones = (alert, latestReport) => {
   return new Promise((resolve, reject) => {
     const script = vm.createScript(`(${alert.isReportCounted})(report, latestReport)`);
-    let reports = countReports([ latestReport ], latestReport, script);
     let skip = 0;
+    let countedReports = [];
+    let phones = [];
     async.doWhilst(
       callback => {
-        const options = { skip: skip, limit: BATCH_SIZE };
-        fetchReports(latestReport.reported_date - 1, alert.timeWindowInDays, alert.forms, options)
-          .then(fetched => callback(null, fetched))
+        getCountedReportsAndPhonesBatch(script, latestReport, alert, skip)
+          .then(output => {
+            countedReports = countedReports.concat(output.countedReports);
+            phones = phones.concat(output.phones);
+            callback(null, output.numFetched);
+          })
           .catch(callback);
       },
-      fetched => {
-        const countedReports = countReports(fetched, latestReport, script);
-        reports = reports.concat(countedReports);
+      numFetched => {
         skip += BATCH_SIZE;
-        return fetched.length === BATCH_SIZE;
+        return numFetched === BATCH_SIZE;
       },
       err => {
         if (err) {
           return reject(err);
         }
-        resolve(reports);
+        resolve({ countedReports: countedReports, phones: _.uniq(phones) });
       }
     );
   });
+};
+
+/**
+ * Returns Promise({ numFetched, countedReports, phones }) for the db batch with skip value.
+ */
+const getCountedReportsAndPhonesBatch = (script, latestReport, alert, skip) => {
+  const options = { skip: skip, limit: BATCH_SIZE };
+  const output = { countedReports: [ latestReport ] };
+  return fetchReports(latestReport.reported_date - 1, alert.timeWindowInDays, alert.forms, options)
+    .then(fetched => {
+      output.numFetched = fetched.length;
+      output.countedReports = output.countedReports.concat(countReports(fetched, latestReport, script));
+    })
+    .then(() => {
+      output.phones = [];
+      output.countedReports.forEach(countedReport => {
+        const phonesForReport = getPhones(alert.recipients, countedReport);
+        output.phones = output.phones.concat(phonesForReport);
+      });
+      output.phones = _.uniq(output.phones);
+      return output;
+    });
 };
 
 /* Return true if the doc has been changed. */
@@ -202,9 +227,9 @@ const runOneAlert = (alert, latestReport) => {
   if (alert.forms && alert.forms.length && !alert.forms.includes(latestReport.form)) {
     return Promise.resolve(false);
   }
-  return getFilteredReports(alert, latestReport).then(reports => {
-    if (reports.length >= alert.numReportsThreshold) {
-      return generateMessages(alert, reports);
+  return getCountedReportsAndPhones(alert, latestReport).then(output => {
+    if (output.countedReports.length >= alert.numReportsThreshold) {
+      return generateMessages(alert, output.phones, output.countedReports);
     }
     return false;
   });
