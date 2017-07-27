@@ -191,7 +191,7 @@ const getCountedReportsAndPhones = (alert, latestReport) => {
     let skip = 0;
     let countedReportsIds = [ latestReport._id ];
     let newReports = [ latestReport ];
-    let phones = [ ...getPhonesOneReport(alert.recipients, latestReport) ];
+    let phones = getPhonesOneReport(alert.recipients, latestReport);
     async.doWhilst(
       callback => {
         getCountedReportsAndPhonesBatch(script, latestReport, alert, skip)
@@ -222,22 +222,16 @@ const getCountedReportsAndPhones = (alert, latestReport) => {
  */
 const getCountedReportsAndPhonesBatch = (script, latestReport, alert, skip) => {
   const options = { skip: skip, limit: BATCH_SIZE };
-  const output = {};
-  let countedReports;
   return fetchReports(latestReport.reported_date - 1, alert.timeWindowInDays, alert.forms, options)
     .then(fetched => {
-      output.numFetched = fetched.length;
-      countedReports = countReports(fetched, latestReport, script);
-      output.countedReportsIds = countedReports.map(report => report._id);
-      return countedReports;
-    })
-    .then(counted => {
-      output.newReports = counted.filter(report => !isReportAlreadyMessaged(report, alert.name));
-      return output.newReports;
-    })
-    .then((newReports) => {
-      output.phones = getPhones(alert.recipients, newReports);
-      return output;
+      const countedReports = countReports(fetched, latestReport, script);
+      const newReports = countedReports.filter(report => !isReportAlreadyMessaged(report, alert.name));
+      return {
+        numFetched: fetched.length,
+        countedReportsIds: countedReports.map(report => report._id),
+        newReports: newReports,
+        phones: getPhones(alert.recipients, newReports)
+      };
     });
 };
 
