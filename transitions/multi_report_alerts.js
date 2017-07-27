@@ -10,19 +10,19 @@ const vm = require('vm'),
       TRANSITION_NAME = 'multi_report_alerts',
       BATCH_SIZE = 100,
       requiredFields = [
-        'isReportCounted',
+        'is_report_counted',
         'name',
-        'numReportsThreshold',
+        'num_reports_threshold',
         'message',
         'recipients',
-        'timeWindowInDays'
+        'time_window_in_days'
       ];
 
 const getAlertConfig = () => config.get(TRANSITION_NAME);
 
 /* Returned list does not include the change.doc. */
-const fetchReports = (latestTimestamp, timeWindowInDays, formTypes, options) => {
-  return utils.getReportsWithinTimeWindow(latestTimestamp, timeWindowInDays, options)
+const fetchReports = (latestTimestamp, time_window_in_days, formTypes, options) => {
+  return utils.getReportsWithinTimeWindow(latestTimestamp, time_window_in_days, options)
     .then((reports) => {
       if (formTypes && formTypes.length) {
         return reports.filter((report) => report.form && formTypes.includes(report.form));
@@ -38,7 +38,7 @@ const countReports = (reports, latestReport, script) => {
     try {
       return script.runInNewContext(context);
     } catch(err) {
-      logger.error(`Could not eval "isReportCounted" function for (report=${context.report._id}, latestReport=${context.latestReport._id}). Report will not be counted. Error: ${err.message}`);
+      logger.error(`Could not eval "is_report_counted" function for (report=${context.report._id}, latestReport=${context.latestReport._id}). Report will not be counted. Error: ${err.message}`);
       return false;
     }
   });
@@ -63,16 +63,16 @@ const generateMessages = (alert, phones, latestReport, countedReportsIds, newRep
       phone: phone,
       message: alert.message,
       templateContext: {
-        newReports: newReports,
-        numCountedReports: countedReportsIds.length,
-        alertName: alert.name,
-        numReportsThreshold: alert.numReportsThreshold,
-        timeWindowInDays: alert.timeWindowInDays
+        new_reports: newReports,
+        num_counted_reports: countedReportsIds.length,
+        alert_name: alert.name,
+        num_reports_threshold: alert.num_reports_threshold,
+        time_window_in_days: alert.time_window_in_days
       },
       taskFields: {
         type: 'alert',
         alert_name: alert.name,
-        countedReports: countedReportsIds
+        counted_reports: countedReportsIds
       }
     });
     isLatestReportChanged = true;
@@ -153,13 +153,13 @@ const validateConfig = () => {
         errors.push(`Alert number ${idx}, expecting fields: ${requiredFields.join(', ')}`);
       }
     });
-    alert.timeWindowInDays = parseInt(alert.timeWindowInDays);
-    if (isNaN(alert.timeWindowInDays)) {
-      errors.push(`Alert "${alert.name}", expecting "timeWindowInDays" to be an integer, eg: "timeWindowInDays": "3"`);
+    alert.time_window_in_days = parseInt(alert.time_window_in_days);
+    if (isNaN(alert.time_window_in_days)) {
+      errors.push(`Alert "${alert.name}", expecting "time_window_in_days" to be an integer, eg: "time_window_in_days": "3"`);
     }
-    alert.numReportsThreshold = parseInt(alert.numReportsThreshold);
-    if (isNaN(alert.numReportsThreshold)) {
-      errors.push(`Alert "${alert.name}", expecting "numReportsThreshold" to be an integer, eg: "numReportsThreshold": "3"`);
+    alert.num_reports_threshold = parseInt(alert.num_reports_threshold);
+    if (isNaN(alert.num_reports_threshold)) {
+      errors.push(`Alert "${alert.name}", expecting "num_reports_threshold" to be an integer, eg: "num_reports_threshold": "3"`);
     }
     if(!_.isArray(alert.recipients)) {
       errors.push(`Alert "${alert.name}", expecting "recipients" to be an array of strings, eg: "recipients": ["+9779841452277", "countedReports[0].contact.phone"]`);
@@ -187,7 +187,7 @@ const validateConfig = () => {
  */
 const getCountedReportsAndPhones = (alert, latestReport) => {
   return new Promise((resolve, reject) => {
-    const script = vm.createScript(`(${alert.isReportCounted})(report, latestReport)`);
+    const script = vm.createScript(`(${alert.is_report_counted})(report, latestReport)`);
     let skip = 0;
     let countedReportsIds = [ latestReport._id ];
     let newReports = [ latestReport ];
@@ -222,7 +222,7 @@ const getCountedReportsAndPhones = (alert, latestReport) => {
  */
 const getCountedReportsAndPhonesBatch = (script, latestReport, alert, skip) => {
   const options = { skip: skip, limit: BATCH_SIZE };
-  return fetchReports(latestReport.reported_date - 1, alert.timeWindowInDays, alert.forms, options)
+  return fetchReports(latestReport.reported_date - 1, alert.time_window_in_days, alert.forms, options)
     .then(fetched => {
       const countedReports = countReports(fetched, latestReport, script);
       const newReports = countedReports.filter(report => !isReportAlreadyMessaged(report, alert.name));
@@ -241,7 +241,7 @@ const runOneAlert = (alert, latestReport) => {
     return Promise.resolve(false);
   }
   return getCountedReportsAndPhones(alert, latestReport).then(output => {
-    if (output.countedReportsIds.length >= alert.numReportsThreshold) {
+    if (output.countedReportsIds.length >= alert.num_reports_threshold) {
       return generateMessages(alert, output.phones, latestReport, output.countedReportsIds, output.newReports);
     }
     return false;
