@@ -9,7 +9,6 @@ const vm = require('vm'),
       transitionUtils = require('./utils'),
       TRANSITION_NAME = 'multi_form_alerts',
       BATCH_SIZE = 100,
-      MAX_TIME_WINDOW = 100,
       requiredFields = [
         'isReportCounted',
         'name',
@@ -157,9 +156,6 @@ const validateConfig = () => {
     alert.timeWindowInDays = parseInt(alert.timeWindowInDays);
     if (isNaN(alert.timeWindowInDays)) {
       errors.push(`Alert "${alert.name}", expecting "timeWindowInDays" to be an integer, eg: "timeWindowInDays": "3"`);
-    }
-    if (alert.timeWindowInDays > MAX_TIME_WINDOW) {
-      errors.push(`Alert "${alert.name}", "timeWindowInDays" should be less than {{MAX_TIME_WINDOW}}. Found: {{alert.timeWindowInDays}}`);
     }
     alert.numReportsThreshold = parseInt(alert.numReportsThreshold);
     if (isNaN(alert.numReportsThreshold)) {

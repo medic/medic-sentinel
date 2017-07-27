@@ -117,11 +117,6 @@ exports['validates config : timeWindowInDays'] = test => {
   testConfigIsValid(test, [_.omit(alert, 'timeWindowInDays')]);
 };
 
-exports['validates config : timeWindowInDays < 100'] = test => {
-  alert.timeWindowInDays = 101;
-  testConfigIsValid(test, [ alert ]);
-};
-
 exports['fetches reports within time window'] = test => {
   sinon.stub(config, 'get').returns([alert]);
   sinon.stub(utils, 'getReportsWithinTimeWindow').returns(Promise.resolve(reports));
