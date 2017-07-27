@@ -3,7 +3,7 @@ const _ = require('underscore'),
       lineage = require('../../../lib/lineage'),
       messages = require('../../../lib/messages'),
       sinon = require('sinon').sandbox.create(),
-      transition = require('../../../transitions/multi_form_alerts'),
+      transition = require('../../../transitions/multi_report_alerts'),
       utils = require('../../../lib/utils');
 
 let alert;
@@ -74,7 +74,7 @@ exports['filter validation hasRun'] = test => {
   test.equal(transition.filter({
     form: 'x',
     type: 'data_record',
-    transitions : { multi_form_alerts: 'hi' }
+    transitions : { multi_report_alerts: 'hi' }
   }), false);
   test.done();
 };
@@ -84,7 +84,7 @@ const testConfigIsValid = (test, alerts) => {
   try {
     transition.init();
   } catch(e) {
-    test.equals(config.get.getCall(0).args[0], 'multi_form_alerts');
+    test.equals(config.get.getCall(0).args[0], 'multi_report_alerts');
     test.done();
   }
 };

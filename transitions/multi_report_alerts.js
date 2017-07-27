@@ -7,7 +7,7 @@ const vm = require('vm'),
       messages = require('../lib/messages'),
       utils = require('../lib/utils'),
       transitionUtils = require('./utils'),
-      TRANSITION_NAME = 'multi_form_alerts',
+      TRANSITION_NAME = 'multi_report_alerts',
       BATCH_SIZE = 100,
       requiredFields = [
         'isReportCounted',
@@ -130,16 +130,16 @@ const getPhonesOneReportOneRecipientWithDuplicates = (recipient, countedReport) 
     if (_.isArray(evaled)) {
       return evaled.map((shouldBeAString) => {
         if (!_.isString(shouldBeAString)) {
-          return { error: `multi_form_alerts : one of the phone numbers for "${recipient}"` +
+          return { error: `${TRANSITION_NAME} : one of the phone numbers for "${recipient}"` +
             ` is not a string. Message will not be sent. Found : ${JSON.stringify(shouldBeAString)}` };
         }
         return shouldBeAString;
       });
     }
-    return { error: `multi_form_alerts : phone number for "${recipient}"` +
+    return { error: `${TRANSITION_NAME} : phone number for "${recipient}"` +
       ` is not a string or array of strings. Message will not be sent. Found: "${JSON.stringify(evaled)}"` };
   } catch(err) {
-    return { error: `multi_form_alerts : Could not find a phone number for "${recipient}". ` +
+    return { error: `${TRANSITION_NAME} : Could not find a phone number for "${recipient}". ` +
       `Message will not be sent. Error: "${err.message}"` };
   }
 };
