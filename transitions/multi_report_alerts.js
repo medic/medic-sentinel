@@ -21,8 +21,8 @@ const vm = require('vm'),
 const getAlertConfig = () => config.get(TRANSITION_NAME);
 
 /* Returned list does not include the change.doc. */
-const fetchReports = (latestTimestamp, time_window_in_days, formTypes, options) => {
-  return utils.getReportsWithinTimeWindow(latestTimestamp, time_window_in_days, options)
+const fetchReports = (latestTimestamp, timeWindowInDays, formTypes, options) => {
+  return utils.getReportsWithinTimeWindow(latestTimestamp, timeWindowInDays, options)
     .then((reports) => {
       if (formTypes && formTypes.length) {
         return reports.filter((report) => report.form && formTypes.includes(report.form));
@@ -63,6 +63,7 @@ const generateMessages = (alert, phones, latestReport, countedReportsIds, newRep
       phone: phone,
       message: alert.message,
       templateContext: {
+        // use snake_case for consistency with other fields.
         new_reports: newReports,
         num_counted_reports: countedReportsIds.length,
         alert_name: alert.name,
