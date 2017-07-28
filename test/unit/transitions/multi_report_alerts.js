@@ -105,6 +105,11 @@ exports['validates config : num_reports_threshold'] = test => {
   testConfigIsValid(test, [_.omit(alert, 'num_reports_threshold')]);
 };
 
+exports['validates config : num_reports_threshold < 100'] = test => {
+  alert.num_reports_threshold = 100000000; // arbitrary large number
+  testConfigIsValid(test, [ alert ]);
+};
+
 exports['validates config : message'] = test => {
   testConfigIsValid(test, [_.omit(alert, 'message')]);
 };
