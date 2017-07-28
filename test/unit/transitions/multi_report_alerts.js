@@ -107,7 +107,7 @@ exports['validates config : num_reports_threshold'] = test => {
 
 exports['validates config : num_reports_threshold < 100'] = test => {
   alert.num_reports_threshold = 100000000; // arbitrary large number
-  testConfigIsValid(test, [ alert ]);
+  assertConfigIsInvalid(test, [ alert ]);
 };
 
 exports['validates config : message'] = test => {
