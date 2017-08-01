@@ -44,7 +44,7 @@ exports['onMatch with matching form calls getRegistrations and then matchRegistr
     sinon.stub(transition, 'getAcceptedReports').returns([ { form: 'x' }, { form: 'z' } ]);
 
     var getRegistrations = sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, []),
-        getPatientContactUuid = sinon.stub(utils, 'getPatientContactUuid').callsArgWith(2, null, {_id: 'uuid'}),
+        getPatientContact = sinon.stub(utils, 'getPatientContact').callsArgWith(2, null, { _id: 'uuid', name: 'sally' }),
         matchRegistrations = sinon.stub(transition, 'matchRegistrations').callsArgWith(1, null, true);
 
     transition.onMatch({
@@ -56,9 +56,9 @@ exports['onMatch with matching form calls getRegistrations and then matchRegistr
         test.equal(complete, true);
 
         test.equal(getRegistrations.called, true);
-        test.equal(getPatientContactUuid.called, true);
-        test.equal(getPatientContactUuid.callCount, 1);
-        test.equal(getPatientContactUuid.args[0][1], 'x');
+        test.equal(getPatientContact.called, true);
+        test.equal(getPatientContact.callCount, 1);
+        test.equal(getPatientContact.args[0][1], 'x');
         test.equal(matchRegistrations.called, true);
 
         test.done();
@@ -68,7 +68,7 @@ exports['onMatch with matching form calls getRegistrations and then matchRegistr
 exports['onMatch with no patient id adds error msg and response'] = function(test) {
     sinon.stub(transition, 'getAcceptedReports').returns([ { form: 'x' }, { form: 'z' } ]);
     sinon.stub(utils, 'getRegistrations').callsArgWith(1, null, []);
-    sinon.stub(utils, 'getPatientContactUuid').callsArgWith(2);
+    sinon.stub(utils, 'getPatientContact').callsArgWith(2);
     sinon.stub(transition, 'matchRegistrations').callsArgWith(1, null, true);
 
     var doc = {
@@ -115,7 +115,7 @@ exports['matchRegistrations with no registrations does not error'] = function(te
     });
 };
 
-exports['matchRegistrations with registrations adds reply'] = function(test) {
+exports['matchRegistrations with patient adds reply'] = function(test) {
     var doc = {
         fields: { patient_id: '559' },
         contact: {
@@ -131,9 +131,7 @@ exports['matchRegistrations with registrations adds reply'] = function(test) {
     };
 
     transition.matchRegistrations({
-        registrations: [{
-            doc: { fields: { patient_name: 'Archibald' } }
-        }],
+        patient: { patient_name: 'Archibald' },
         doc: doc,
         report: {
             messages: [{
@@ -155,9 +153,8 @@ exports['matchRegistrations with registrations adds reply'] = function(test) {
     });
 };
 
-
 exports['adding silence_type to matchRegistrations calls silenceReminders'] = function(test) {
-    sinon.stub(transition, 'silenceReminders').callsArgWith(1, null);
+    sinon.stub(transition, 'silenceReminders').callsArgWith(1);
 
     transition.matchRegistrations({
         doc: { _id: 'a' },
