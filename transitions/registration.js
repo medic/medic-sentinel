@@ -368,8 +368,8 @@ module.exports = {
       if (err) {
         return callback(err);
       }
-      options.params.forEach(name => {
-        const schedule = schedules.getScheduleConfig(name);
+      options.params.forEach(scheduleName => {
+        const schedule = schedules.getScheduleConfig(scheduleName);
         const assigned = schedules.assignSchedule(
           options.doc, schedule, registrations, person);
         if (!assigned) {
