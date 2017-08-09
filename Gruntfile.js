@@ -4,6 +4,9 @@ module.exports = function(grunt) {
 
   // Project configuration
   grunt.initConfig({
+    nsp: {
+      package: grunt.file.readJSON('package.json')
+    },
     nodeunit: {
       all: [
         'test/unit/**/*.js',
@@ -44,6 +47,7 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks('grunt-contrib-nodeunit');
   grunt.loadNpmTasks('grunt-env');
+  grunt.loadNpmTasks('grunt-nsp');
 
   grunt.registerTask('unit', [
     'env:test',
@@ -54,6 +58,11 @@ module.exports = function(grunt) {
   grunt.registerTask('test', [
     'jshint',
     'unit'
+  ]);
+
+  grunt.registerTask('ci', [
+    'nsp',
+    'test'
   ]);
 
   // Default tasks
