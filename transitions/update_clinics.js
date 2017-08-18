@@ -38,7 +38,7 @@ var getContact = function(db, doc, callback) {
             if (err) {
                 return callback(err);
             }
-            if (!data.rows.length) {
+            if (typeof(data) === 'undefined' || !data.rows.length) {
                 return callback();
             }
             var result = data.rows[0].doc;
