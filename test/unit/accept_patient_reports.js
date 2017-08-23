@@ -275,6 +275,77 @@ exports['silenceReminders testing'] = function(test) {
     });
 };
 
+exports['silenceReminders testing : multiple groups within silence window'] = function(test) {
+    var audit = { saveDoc: function() {} },
+        now = moment(),
+        registration;
+
+    sinon.stub(audit, 'saveDoc').callsArgWith(1, null);
+
+    // mock up a registered_patients view result
+    registration = {
+        doc: {
+            scheduled_tasks: [
+                // in the silence window : cleared
+                {
+                    due: now.clone().add(10, 'days').toISOString(),
+                    group: 1,
+                    state: 'scheduled',
+                    type: 'x'
+                },
+                // in the silence window, same group : cleared
+                {
+                    due: now.clone().add(12, 'days').toISOString(),
+                    group: 1,
+                    state: 'scheduled',
+                    type: 'x'
+                },
+                // in the silence window, different group : cleared
+                {
+                    due: now.clone().add(12, 'days').toISOString(),
+                    group: 2,
+                    state: 'scheduled',
+                    type: 'x'
+                },
+                // out of the silence window, third group : not cleared
+                {
+                    due: now.clone().add(200, 'days').toISOString(),
+                    group: 3,
+                    state: 'scheduled',
+                    type: 'x'
+                }
+            ]
+        }
+    };
+
+    transition.silenceReminders({
+        audit: audit,
+        registration: registration,
+        type: 'x',
+        reported_date: now.valueOf(),
+        silence_for: '15 days'
+    }, function(err) {
+        var tasks;
+
+        test.equal(err, null);
+
+        test.equal(audit.saveDoc.called, true);
+
+        tasks = registration.doc.scheduled_tasks;
+
+        test.equal(tasks[0].state, 'cleared');
+        test.equal(tasks[0].state_history[0].state, 'cleared');
+        test.equal(tasks[1].state, 'cleared');
+        test.equal(tasks[1].state_history[0].state, 'cleared');
+        test.equal(tasks[2].state, 'cleared');
+        test.equal(tasks[2].state_history[0].state, 'cleared');
+        test.equal(tasks[3].state, 'scheduled');
+
+        test.done();
+    });
+
+};
+
 exports['empty silence_for option clears all reminders'] = function(test) {
     var audit = { saveDoc: function() {} },
         now = moment(),
