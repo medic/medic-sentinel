@@ -177,26 +177,37 @@ exports['silenceReminders testing'] = function(test) {
     registration = {
         doc: {
             scheduled_tasks: [
+                // in the past : not cleared
                 {
                     due: now.clone().subtract(5, 'days').toISOString(),
                     group: 1,
                     state: 'scheduled',
                     type: 'x'
                 },
+                // in the past : not cleared
                 {
                     due: now.clone().subtract(2, 'days').toISOString(),
                     group: 1,
                     state: 'scheduled',
                     type: 'x'
                 },
+                // in the silence window : cleared
                 {
                     due: now.clone().add(10, 'days').toISOString(),
                     group: 2,
                     state: 'scheduled',
                     type: 'x'
                 },
+                // in the silence window : cleared
                 {
                     due: now.clone().add(12, 'days').toISOString(),
+                    group: 2,
+                    state: 'scheduled',
+                    type: 'x'
+                },
+                // out of the silence window, but within a cleareable group : cleared
+                {
+                    due: now.clone().add(200, 'days').toISOString(),
                     group: 2,
                     state: 'scheduled',
                     type: 'x'
@@ -205,22 +216,24 @@ exports['silenceReminders testing'] = function(test) {
                     due: now.clone().add(12, 'days').toISOString(),
                     group: 2,
                     state: 'scheduled',
-                    // a different type, should be ignored
+                    // a different type, should be ignored : not cleared
                     type: 'y'
                 },
+                // out of the silence window : not cleared
                 {
                     due: now.clone().add(20, 'days').toISOString(),
                     group: 3,
                     state: 'scheduled',
                     type: 'x'
                 },
+                // out of the silence window : not cleared
                 {
                     due: now.clone().add(25, 'days').toISOString(),
                     group: 3,
                     state: 'scheduled',
                     type: 'x'
                 },
-                // last one is out of order
+                // last one is out of order todo and so what?
                 {
                     due: now.clone().add(7, 'days').toISOString(),
                     group: 1,
@@ -252,9 +265,11 @@ exports['silenceReminders testing'] = function(test) {
         test.equal(tasks[2].state_history[0].state, 'cleared');
         test.equal(tasks[3].state, 'cleared');
         test.equal(tasks[3].state_history[0].state, 'cleared');
-        test.equal(tasks[4].state, 'scheduled');
+        test.equal(tasks[4].state, 'cleared');
+        test.equal(tasks[4].state_history[0].state, 'cleared');
         test.equal(tasks[5].state, 'scheduled');
         test.equal(tasks[6].state, 'scheduled');
+        test.equal(tasks[7].state, 'scheduled');
 
         test.done();
     });
