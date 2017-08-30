@@ -143,6 +143,7 @@ const addMessagesToDoc = (doc, config, registrations, patientContact) => {
 };
 
 module.exports = {
+    _findToClear : findToClear,
     filter: function(doc) {
         return Boolean(
             doc &&
