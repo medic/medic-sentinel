@@ -3,7 +3,6 @@ const _ = require('underscore'),
       db = require('./db'),
       logger = require('./lib/logger'),
       defaults = require('./defaults'),
-      transitions = require('./transitions'),
       translations = {},
       SETTINGS_PATH = '_design/medic/_rewrite/app_settings/medic';
 
@@ -77,7 +76,7 @@ module.exports = {
     return loadTranslations()
       .then(initConfig)
       .then(() => {
-        return transitions.loadTransitions();
+        return require('./transitions').loadTransitions();
       });
   }
 };
