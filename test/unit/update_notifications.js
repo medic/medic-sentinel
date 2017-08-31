@@ -208,6 +208,7 @@ exports['registration not found adds error and response'] = function(test) {
         on_form: 'on'
     });
     sinon.stub(utils, 'getRegistrations').callsArgWithAsync(1, null, []);
+    sinon.stub(utils, 'getPatientContact').callsArgWithAsync(2, null, {});
 
     transition.onMatch({
         doc: doc,
@@ -308,10 +309,8 @@ exports['mute responds correctly'] = function(test) {
         off_form: 'off'
     });
 
-    sinon.stub(utils, 'getRegistrations').callsArgWithAsync(1, null, [{
-        _id: 'x',
-        doc: regDoc
-    }]);
+    sinon.stub(utils, 'getRegistrations').callsArgWithAsync(1, null, [regDoc]);
+    sinon.stub(utils, 'getPatientContact').callsArgWithAsync(2, null, {});
 
     var audit = {
         saveDoc: function(doc, callback) {
