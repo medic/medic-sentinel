@@ -46,12 +46,10 @@ const countReports = (reports, latestReport, script) => {
 };
 
 const generateMessages = (alert, phones, latestReport, countedReportsIds, newReports) => {
-  let isLatestReportChanged = false;
   phones.forEach((phone) => {
     if (phone.error) {
       logger.error(phone.error);
       messages.addError(latestReport, phone.error);
-      isLatestReportChanged = true;
       return;
     }
     messages.addMessage({
@@ -72,9 +70,10 @@ const generateMessages = (alert, phones, latestReport, countedReportsIds, newRep
         counted_reports: countedReportsIds
       }
     });
-    isLatestReportChanged = true;
   });
-  return isLatestReportChanged;
+
+  // true to save the report
+  return phones.length >= 0;
 };
 
 // Recipients format examples:
@@ -202,7 +201,7 @@ const getCountedReportsAndPhones = (alert, latestReport) => {
     let oldReportIds = [ ];
     async.doWhilst(
       callback => {
-        getCountedReportsAndPhonesBatch(script, latestReport, alert, skip)
+        getCountedReportsBatch(script, latestReport, alert, skip)
           .then(output => {
             countedReports = countedReports.concat(output.countedReports);
             oldReportIds = oldReportIds.concat(output.oldReportIds);
@@ -232,9 +231,13 @@ const getCountedReportsAndPhones = (alert, latestReport) => {
 };
 
 /**
- * Returns Promise({ numFetched, countedReports, oldReportIds }) for the db batch with skip value.
+ * Returns Promise({ numFetched, countedReports, oldReportIds }):
+ * numFetched: skip value for batch
+ * countedReports: reports in batch that 'count', determined by the script logic
+ * oldReportIds: report ids that have counted towards previous alerts, see generateMessages()
+ *   These may include ids for documents returned in countedReports.
  */
-const getCountedReportsAndPhonesBatch = (script, latestReport, alert, skip) => {
+const getCountedReportsBatch = (script, latestReport, alert, skip) => {
   const options = { skip: skip, limit: BATCH_SIZE };
   return fetchReports(latestReport.reported_date - 1, alert.time_window_in_days, alert.forms, options)
     .then(fetched => {
