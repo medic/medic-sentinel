@@ -175,60 +175,58 @@ exports['silenceReminders testing'] = function(test) {
 
     // mock up a registered_patients view result
     registration = {
-        doc: {
-            scheduled_tasks: [
-                {
-                    due: now.clone().subtract(5, 'days').toISOString(),
-                    group: 1,
-                    state: 'scheduled',
-                    type: 'x'
-                },
-                {
-                    due: now.clone().subtract(2, 'days').toISOString(),
-                    group: 1,
-                    state: 'scheduled',
-                    type: 'x'
-                },
-                {
-                    due: now.clone().add(10, 'days').toISOString(),
-                    group: 2,
-                    state: 'scheduled',
-                    type: 'x'
-                },
-                {
-                    due: now.clone().add(12, 'days').toISOString(),
-                    group: 2,
-                    state: 'scheduled',
-                    type: 'x'
-                },
-                {
-                    due: now.clone().add(12, 'days').toISOString(),
-                    group: 2,
-                    state: 'scheduled',
-                    // a different type, should be ignored
-                    type: 'y'
-                },
-                {
-                    due: now.clone().add(20, 'days').toISOString(),
-                    group: 3,
-                    state: 'scheduled',
-                    type: 'x'
-                },
-                {
-                    due: now.clone().add(25, 'days').toISOString(),
-                    group: 3,
-                    state: 'scheduled',
-                    type: 'x'
-                },
-                // last one is out of order
-                {
-                    due: now.clone().add(7, 'days').toISOString(),
-                    group: 1,
-                    state: 'scheduled',
-                    type: 'x'
-                }
-            ]
-        }
+        scheduled_tasks: [
+            {
+                due: now.clone().subtract(5, 'days').toISOString(),
+                group: 1,
+                state: 'scheduled',
+                type: 'x'
+            },
+            {
+                due: now.clone().subtract(2, 'days').toISOString(),
+                group: 1,
+                state: 'scheduled',
+                type: 'x'
+            },
+            {
+                due: now.clone().add(10, 'days').toISOString(),
+                group: 2,
+                state: 'scheduled',
+                type: 'x'
+            },
+            {
+                due: now.clone().add(12, 'days').toISOString(),
+                group: 2,
+                state: 'scheduled',
+                type: 'x'
+            },
+            {
+                due: now.clone().add(12, 'days').toISOString(),
+                group: 2,
+                state: 'scheduled',
+                // a different type, should be ignored
+                type: 'y'
+            },
+            {
+                due: now.clone().add(20, 'days').toISOString(),
+                group: 3,
+                state: 'scheduled',
+                type: 'x'
+            },
+            {
+                due: now.clone().add(25, 'days').toISOString(),
+                group: 3,
+                state: 'scheduled',
+                type: 'x'
+            },
+            // last one is out of order
+            {
+                due: now.clone().add(7, 'days').toISOString(),
+                group: 1,
+                state: 'scheduled',
+                type: 'x'
+            }
+        ]
     };
 
     transition.silenceReminders({
@@ -244,7 +242,7 @@ exports['silenceReminders testing'] = function(test) {
 
         test.equal(audit.saveDoc.called, true);
 
-        tasks = registration.doc.scheduled_tasks;
+        tasks = registration.scheduled_tasks;
 
         test.equal(tasks[0].state, 'scheduled');
         test.equal(tasks[1].state, 'scheduled');
@@ -269,40 +267,38 @@ exports['empty silence_for option clears all reminders'] = function(test) {
 
     // mock up a registered_patients view result
     registration = {
-        doc: {
-            scheduled_tasks: [
-                {
-                    due: now.clone().subtract(2, 'days'),
-                    group: 0,
-                    state: 'scheduled',
-                    type: 'x'
-                },
-                {
-                    due: now.clone().add(2, 'days'),
-                    group: 1,
-                    state: 'scheduled',
-                    type: 'x'
-                },
-                {
-                    due: now.clone().add(2, 'days'),
-                    group: 2,
-                    state: 'scheduled',
-                    type: 'y'
-                },
-                {
-                    due: now.clone().add(20, 'days'),
-                    group: 2,
-                    state: 'scheduled',
-                    type: 'x'
-                },
-                {
-                    due: now.clone().add(2, 'days'),
-                    group: 1,
-                    state: 'scheduled',
-                    type: 'x'
-                }
-            ]
-        }
+        scheduled_tasks: [
+            {
+                due: now.clone().subtract(2, 'days'),
+                group: 0,
+                state: 'scheduled',
+                type: 'x'
+            },
+            {
+                due: now.clone().add(2, 'days'),
+                group: 1,
+                state: 'scheduled',
+                type: 'x'
+            },
+            {
+                due: now.clone().add(2, 'days'),
+                group: 2,
+                state: 'scheduled',
+                type: 'y'
+            },
+            {
+                due: now.clone().add(20, 'days'),
+                group: 2,
+                state: 'scheduled',
+                type: 'x'
+            },
+            {
+                due: now.clone().add(2, 'days'),
+                group: 1,
+                state: 'scheduled',
+                type: 'x'
+            }
+        ]
     };
 
     transition.silenceReminders({
@@ -318,7 +314,7 @@ exports['empty silence_for option clears all reminders'] = function(test) {
 
         test.equal(audit.saveDoc.called, true);
 
-        tasks = registration.doc.scheduled_tasks;
+        tasks = registration.scheduled_tasks;
 
         // don't clear in the past
         test.equal(tasks[0].state, 'scheduled');
@@ -345,40 +341,38 @@ exports['when silence_type is comma separated act on multiple schedules'] = func
 
     // mock up a registered_patients view result
     registration = {
-        doc: {
-            scheduled_tasks: [
-                {
-                    due: now.clone().subtract(2, 'days').toISOString(),
-                    group: 0,
-                    state: 'scheduled',
-                    type: 'foo'
-                },
-                {
-                    due: now.clone().add(2, 'days').toISOString(),
-                    group: 1,
-                    state: 'scheduled',
-                    type: 'foo'
-                },
-                {
-                    due: now.clone().add(2, 'days').toISOString(),
-                    group: 2,
-                    state: 'scheduled',
-                    type: 'foo'
-                },
-                {
-                    due: now.clone().add(2, 'days').toISOString(),
-                    group: 1,
-                    state: 'scheduled',
-                    type: 'bar'
-                },
-                {
-                    due: now.clone().add(5, 'days').toISOString(),
-                    group: 1,
-                    state: 'scheduled',
-                    type: 'bar'
-                }
-            ]
-        }
+        scheduled_tasks: [
+            {
+                due: now.clone().subtract(2, 'days').toISOString(),
+                group: 0,
+                state: 'scheduled',
+                type: 'foo'
+            },
+            {
+                due: now.clone().add(2, 'days').toISOString(),
+                group: 1,
+                state: 'scheduled',
+                type: 'foo'
+            },
+            {
+                due: now.clone().add(2, 'days').toISOString(),
+                group: 2,
+                state: 'scheduled',
+                type: 'foo'
+            },
+            {
+                due: now.clone().add(2, 'days').toISOString(),
+                group: 1,
+                state: 'scheduled',
+                type: 'bar'
+            },
+            {
+                due: now.clone().add(5, 'days').toISOString(),
+                group: 1,
+                state: 'scheduled',
+                type: 'bar'
+            }
+        ]
     };
 
     transition.silenceReminders({
@@ -394,7 +388,7 @@ exports['when silence_type is comma separated act on multiple schedules'] = func
 
         test.equal(audit.saveDoc.called, true);
 
-        tasks = registration.doc.scheduled_tasks;
+        tasks = registration.scheduled_tasks;
 
         // don't clear in the past
         test.equal(tasks[0].state, 'scheduled');

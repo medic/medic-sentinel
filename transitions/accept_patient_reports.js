@@ -95,7 +95,7 @@ module.exports = {
     },
     // find the messages to clear
     findToClear: function(options) {
-        var registration = options.registration.doc,
+        var registration = options.registration,
             reported_date = moment(options.reported_date),
             types = _.map(options.type.split(','), function(s) {
                 return s.trim();
@@ -146,7 +146,7 @@ module.exports = {
                 utils.setTaskState(task, 'cleared');
             }
         });
-        options.audit.saveDoc(options.registration.doc, callback);
+        options.audit.saveDoc(options.registration, callback);
     },
     validate: function(config, doc, callback) {
         var validations = config.validations && config.validations.list;
