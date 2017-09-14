@@ -529,9 +529,12 @@ exports['getCountedReportsAndPhones batches properly'] = test => {
   const firstBatch = [...Array(100).keys()].map(report);
   const secondBatch = [...Array(50).keys()].map(report);
 
-  const stub = sinon.stub(utils, 'getReportsWithinTimeWindow');
-  stub.onCall(0).returns(Promise.resolve(firstBatch));
-  stub.onCall(1).returns(Promise.resolve(secondBatch));
+  const hdStub = sinon.stub(lineage, 'hydrateDocs');
+  hdStub.onCall(0).returns(Promise.resolve(firstBatch));
+  hdStub.onCall(1).returns(Promise.resolve(secondBatch));
+  const grwtwStub = sinon.stub(utils, 'getReportsWithinTimeWindow');
+  grwtwStub.onCall(0).returns(Promise.resolve(firstBatch));
+  grwtwStub.onCall(1).returns(Promise.resolve(secondBatch));
 
   transition._getCountedReportsAndPhones(alert, doc)
     .then(({countedReportsIds, newReports}) => {
