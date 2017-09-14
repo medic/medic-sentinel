@@ -282,9 +282,8 @@ exports['fetchHydratedDoc attaches the contacts'] = test => {
   });
 };
 
-// Contacts can be referenced more than once.
 // This is a classic use-case: report from CHW who is the contact for their own area
-exports['fetchHydratedDoc attaches re-used contacts'] = test => {
+exports['fetchHydratedDoc attaches re-used contacts, minify handles the circular references'] = test => {
   const docId = 'docId';
   const chwId = 'chwId';
   const areaId = 'areaId';
@@ -303,21 +302,14 @@ exports['fetchHydratedDoc attaches re-used contacts'] = test => {
     { doc: chw }
   ]});
   lineage.fetchHydratedDoc(docId).then(actual => {
-    console.log(JSON.stringify(actual));
-    test.deepEqual(actual, {
-      _id: docId,
-      contact: {
-        _id: chwId,
-        parent: {
-          _id: areaId,
-          contact: {
-            _id: chwId,
-            hydrated: true
-          }
-        },
-        hydrated: true
-      }
-    });
+    // The contact and the contact's parent's contact are the hydrated CHW
+    test.equal(actual.contact.parent.contact.hydrated, true);
+    test.equal(actual.contact.hydrated, true);
+
+    // And we can minifiy back to the original without error
+    lineage.minify(actual);
+    test.deepEqual(actual, doc);
+
     test.done();
   });
 };
