@@ -132,17 +132,11 @@ const deleteInfoDoc = (change, callback) => {
 };
 
 const getAdminNames = callback => {
-  const options = { key: [ 'user-settings' ], include_docs: true };
-  db.medic.view('medic-client', 'doc_by_type', options, (err, results) => {
+  db.medic.view('medic', 'online_user_settings_by_id', {}, (err, results) => {
     if (err) {
       return callback(err);
     }
     const admins = results.rows
-      .filter(row => {
-        return row.doc.roles &&
-               (row.doc.roles.includes('_admin') ||
-               row.doc.roles.includes('national_admin'));
-      })
       .map(row => {
         const parts = row.id.split(':');
         return parts.length > 1 && parts[1];
@@ -180,6 +174,7 @@ const deleteReadDocs = (change, callback) => {
             if (err) {
               return callback(err);
             }
+            // find which of the possible ids was the right one
             const row = results.rows.find(row => !!row.doc);
             if (!row) {
               return callback();

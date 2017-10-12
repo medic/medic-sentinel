@@ -304,7 +304,7 @@ exports['deleteReadDocs handles missing meta db'] = test => {
   const given = { id: 'abc' };
   const metaDb = { info: function() {} };
   sinon.stub(db.medic, 'view').callsArgWith(3, null, {
-    rows: [ { id: 'org.couchdb.user:gareth', doc: { roles: [ '_admin' ] } } ]
+    rows: [ { id: 'org.couchdb.user:gareth' } ]
   });
   sinon.stub(db, 'use').returns(metaDb);
   sinon.stub(metaDb, 'info').callsArgWith(0, { statusCode: 404 });
@@ -321,7 +321,7 @@ exports['deleteReadDocs handles missing read doc'] = test => {
     fetch: function() {}
   };
   sinon.stub(db.medic, 'view').callsArgWith(3, null, { rows: [
-    { id: 'org.couchdb.user:gareth', doc: { roles: [ '_admin' ] } }
+    { id: 'org.couchdb.user:gareth' }
   ] });
   sinon.stub(db, 'use').returns(metaDb);
   sinon.stub(metaDb, 'info').callsArg(0);
@@ -340,9 +340,8 @@ exports['deleteReadDocs deletes read doc for all admins'] = test => {
     insert: function() {}
   };
   const view = sinon.stub(db.medic, 'view').callsArgWith(3, null, { rows: [
-    { id: 'org.couchdb.user:gareth', doc: { roles: [ '_admin' ] } },
-    { id: 'org.couchdb.user:jim', doc: { roles: [ 'user', 'national_admin' ] } },
-    { id: 'org.couchdb.user:nobody', doc: { roles: [ 'user', 'district_admin' ] } }
+    { id: 'org.couchdb.user:gareth' },
+    { id: 'org.couchdb.user:jim' }
   ] });
   const use = sinon.stub(db, 'use').returns(metaDb);
   const info = sinon.stub(metaDb, 'info').callsArg(0);
