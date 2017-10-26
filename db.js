@@ -1,14 +1,17 @@
 var nano = require('nano'),
 	url = require('url'),
-    path = require('path');
+    path = require('path'),
+    request = require('request');
 
 var couchUrl = process.env.COUCH_URL;
 if (couchUrl) {
     // strip trailing slash from to prevent bugs in path matching
     couchUrl = couchUrl.replace(/\/$/, '');
     var parsedUrl = url.parse(couchUrl);
+    var baseUrl = couchUrl.substring(0, couchUrl.indexOf('/', 10));
+    var luceneUrl = baseUrl.replace('5984', '5985');
 
-    module.exports = nano(couchUrl.substring(0, couchUrl.indexOf('/', 10)));
+    module.exports = nano(baseUrl);
     module.exports.medic = nano(couchUrl);
 
     var dbName = parsedUrl.path.replace('/','');
@@ -28,8 +31,38 @@ if (couchUrl) {
     }
 
     module.exports.fti = function(index, data, cb) {
-        var uri = path.join('/_fti/local', module.exports.settings.db, '_design', module.exports.settings.ddoc, index);
-        module.exports.request({ path: uri, qs: data }, cb);
+        var uri = path.join('local', module.exports.settings.db, '_design',
+                            module.exports.settings.ddoc, index);
+        var url = luceneUrl + '/' + uri;
+
+        if (data.q && !data.limit) {
+            data.limit = 1000;
+        }
+        var opts = { url: url };
+        if (data.q) {
+            opts.method = 'post';
+            opts.form = data;
+        } else {
+            opts.qs = data;
+        }
+
+        request(opts, function(err, response, result) {
+            if (err) {
+                // the request itself failed
+                console.error(err);
+                return cb(new Error('Error when making lucene request'));
+            }
+            try {
+                result = JSON.parse(result);
+            } catch (e) {
+                return cb(e);
+            }
+            if (data.q && !result.rows) {
+                // the query failed for some reason
+                return cb(result);
+            }
+            cb(null, result);
+        });
     };
 } else if (process.env.TEST_ENV) {
     // Running tests only
