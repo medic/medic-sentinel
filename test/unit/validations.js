@@ -66,10 +66,7 @@ exports['pass unique validation when no doc found'] = function(test) {
         test.equal(view.callCount, 1);
         test.equal(view.args[0][0], 'medic-client');
         test.equal(view.args[0][1], 'reports_by_freetext');
-        test.deepEqual(view.args[0][2], {
-            include_docs: true,
-            key: ['patient_id:111']
-        });
+        test.deepEqual(view.args[0][2], { key: ['patient_id:111'] });
         test.equal(errors.length, 0);
         test.done();
     });
@@ -95,21 +92,20 @@ exports['pass unique validation when doc is the same'] = function(test) {
         test.equal(view.callCount, 1);
         test.equal(view.args[0][0], 'medic-client');
         test.equal(view.args[0][1], 'reports_by_freetext');
-        test.deepEqual(view.args[0][2], {
-            include_docs: true,
-            key: ['patient_id:111']
-        });
+        test.deepEqual(view.args[0][2], { key: ['patient_id:111'] });
         test.equal(errors.length, 0);
         test.done();
     });
 };
 
 exports['pass unique validation when doc has errors'] = function(test) {
-    test.expect(5);
+    test.expect(7);
     var view = sinon.stub(db.medic, 'view').callsArgWith(3, null, {
+        rows: [{ id: 'different' }]
+    });
+    var fetch = sinon.stub(db.medic, 'fetch').callsArgWith(1, null, {
         rows: [{
             id: 'different',
-            patient_id: '111',
             doc: { errors: [{ foo: 'bar' }] }
         }]
     });
@@ -125,10 +121,9 @@ exports['pass unique validation when doc has errors'] = function(test) {
         test.equal(view.callCount, 1);
         test.equal(view.args[0][0], 'medic-client');
         test.equal(view.args[0][1], 'reports_by_freetext');
-        test.deepEqual(view.args[0][2], {
-            include_docs: true,
-            key: ['patient_id:111']
-        });
+        test.deepEqual(view.args[0][2], { key: ['patient_id:111'] });
+        test.equal(fetch.callCount, 1);
+        test.deepEqual(fetch.args[0][0], { keys: [ 'different' ] });
         test.equal(errors.length, 0);
         test.done();
     });
@@ -137,6 +132,9 @@ exports['pass unique validation when doc has errors'] = function(test) {
 exports['fail unique validation on doc with no errors'] = function(test) {
     test.expect(1);
     sinon.stub(db.medic, 'view').callsArgWith(3, null, {
+        rows: [{ id: 'different' }]
+    });
+    sinon.stub(db.medic, 'fetch').callsArgWith(1, null, {
         rows: [{
             id: 'different',
             doc: { _id: 'different', errors: [] }
@@ -164,8 +162,11 @@ exports['fail unique validation on doc with no errors'] = function(test) {
 };
 
 exports['fail multiple field unique validation on doc with no errors'] = function(test) {
-    test.expect(8);
+    test.expect(10);
     var view = sinon.stub(db.medic, 'view').callsArgWith(3, null, {
+        rows: [{ id: 'different' }]
+    });
+    var fetch = sinon.stub(db.medic, 'fetch').callsArgWith(1, null, {
         rows: [{
             id: 'different',
             doc: { _id: 'different', errors: [] }
@@ -188,15 +189,12 @@ exports['fail multiple field unique validation on doc with no errors'] = functio
         test.equal(view.callCount, 2);
         test.equal(view.args[0][0], 'medic-client');
         test.equal(view.args[0][1], 'reports_by_freetext');
-        test.deepEqual(view.args[0][2], {
-            include_docs: true,
-            key: ['xyz:444']
-        });
+        test.deepEqual(view.args[0][2], { key: ['xyz:444'] });
         test.equal(view.args[1][0], 'medic-client');
         test.equal(view.args[1][1], 'reports_by_freetext');
-        test.deepEqual(view.args[1][2], {
-            key: ['abc:cheese']
-        });
+        test.deepEqual(view.args[1][2], { key: ['abc:cheese'] });
+        test.equal(fetch.callCount, 1);
+        test.deepEqual(fetch.args[0][0], { keys: [ 'different' ] });
         test.deepEqual(errors, [{
             code: 'invalid_xyz_unique',
             message: 'Duplicate xyz {{xyz}} and abc {{abc}}.'
@@ -209,6 +207,9 @@ exports['pass uniqueWithin validation on old doc'] = function(test) {
     test.expect(1);
     clock = sinon.useFakeTimers();
     sinon.stub(db.medic, 'view').callsArgWith(3, null, {
+        rows: [{ id: 'different' }]
+    });
+    sinon.stub(db.medic, 'fetch').callsArgWith(1, null, {
         rows: [{
             id: 'different',
             doc: {
@@ -240,6 +241,9 @@ exports['fail uniqueWithin validation on new doc'] = function(test) {
     test.expect(1);
     clock = sinon.useFakeTimers();
     sinon.stub(db.medic, 'view').callsArgWith(3, null, {
+        rows: [{ id: 'different' }]
+    });
+    sinon.stub(db.medic, 'fetch').callsArgWith(1, null, {
         rows: [{
             id: 'different',
             doc: {
@@ -310,6 +314,9 @@ exports['formatParam use <int> query on integers'] = function(test) {
 exports['pass exists validation when matching document'] = function(test) {
     test.expect(8);
     var view = sinon.stub(db.medic, 'view').callsArgWith(3, null, {
+        rows: [{ id: 'different' }]
+    });
+    sinon.stub(db.medic, 'fetch').callsArgWith(1, null, {
         rows: [{
             id: 'different',
             doc: { _id: 'different', errors: [] }
@@ -331,15 +338,10 @@ exports['pass exists validation when matching document'] = function(test) {
         test.equal(view.callCount, 2);
         test.equal(view.args[0][0], 'medic-client');
         test.equal(view.args[0][1], 'reports_by_freetext');
-        test.deepEqual(view.args[0][2], {
-            include_docs: true,
-            key: ['patient_id:444']
-        });
+        test.deepEqual(view.args[0][2], { key: ['patient_id:444'] });
         test.equal(view.args[1][0], 'medic-client');
         test.equal(view.args[1][1], 'reports_by_freetext');
-        test.deepEqual(view.args[1][2], {
-            key: ['form:REGISTRATION']
-        });
+        test.deepEqual(view.args[1][2], { key: ['form:REGISTRATION'] });
         test.deepEqual(errors, []);
         test.done();
     });
@@ -368,7 +370,6 @@ exports['fail exists validation when no matching document'] = function(test) {
             message: 'Unknown patient {{parent_id}}.'
         }]);
         test.done();
-
     });
 };
 
