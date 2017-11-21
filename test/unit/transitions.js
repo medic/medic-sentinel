@@ -231,10 +231,9 @@ exports['attach handles missing meta data doc'] = test => {
 exports['attach handles old meta data doc'] = test => {
   const get = sinon.stub(db.medic, 'get');
   get.withArgs('_local/sentinel-meta-data').callsArgWith(1, { statusCode: 404 });
-  get.withArgs('sentinel-meta-data').callsArgWith(1, null, { _id: 'sentinel-meta-data', _rev: '1-123', processed_seq: 22 });
+  get.withArgs('sentinel-meta-data').callsArgWith(1, null, { _id: 'sentinel-meta-data', _rev: '1-123', processed_seq: 22});
   const fetchHydratedDoc = sinon.stub(lineage, 'fetchHydratedDoc').returns(Promise.resolve({ type: 'data_record' }));
   const insert = sinon.stub(db.medic, 'insert').callsArg(1);
-  const destroy = sinon.stub(db.medic, 'destroy').callsArg(2);
   const on = sinon.stub();
   const start = sinon.stub();
   const feed = sinon.stub(follow, 'Feed').returns({ on: on, follow: start, stop: () => {} });
@@ -248,12 +247,13 @@ exports['attach handles old meta data doc'] = test => {
     test.equal(applyTransitions.callCount, 1);
     test.equal(applyTransitions.args[0][0].change.id, 'abc');
     test.equal(applyTransitions.args[0][0].change.seq, 55);
-    test.equal(insert.callCount, 1);
-    test.equal(insert.args[0][0]._id, '_local/sentinel-meta-data');
-    test.equal(insert.args[0][0].processed_seq, 55);
-    test.equal(destroy.callCount, 2);
-    test.equal(destroy.args[0][0], 'sentinel-meta-data');
-    test.equal(destroy.args[0][1], '1-123');
+    test.equal(insert.callCount, 3);
+    test.equal(insert.args[0][0]._id, 'sentinel-meta-data');
+    test.equal(insert.args[0][0]._rev, '1-123');
+    test.equal(insert.args[0][0]._deleted, true);
+    // args[1] is a second incorrect call to delete that is an artifact of how Sinon works
+    test.equal(insert.args[2][0]._id, '_local/sentinel-meta-data');
+    test.equal(insert.args[2][0].processed_seq, 55);
     test.done();
   };
   transitions._attach();

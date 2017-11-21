@@ -437,7 +437,13 @@ const getMetaData = callback =>
         }
 
         // Old doc exists, delete it and return the base doc to be saved later
-        db.medic.destroy(doc._id, doc._rev, err => {
+        const stub = {
+          _id: doc._id,
+          _rev: doc._rev,
+          _deleted: true
+        };
+        console.log('to be clear were deleting', stub, 'was', doc);
+        db.medic.insert(stub, err => {
           if (err) {
             return callback(err);
           }
