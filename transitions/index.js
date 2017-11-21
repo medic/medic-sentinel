@@ -442,7 +442,7 @@ const getMetaData = callback =>
           _rev: doc._rev,
           _deleted: true
         };
-        console.log('to be clear were deleting', stub, 'was', doc);
+        logger.info('Deleting old metadata document', doc);
         db.medic.insert(stub, err => {
           if (err) {
             return callback(err);
