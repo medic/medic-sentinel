@@ -419,11 +419,37 @@ const getMetaData = callback =>
       if (err.statusCode !== 404) {
         return callback(err);
       }
-      doc = {
-        _id: METADATA_DOCUMENT,
-        processed_seq: 0
-      };
+
+      // Doc doesn't exist.
+      // Maybe we have the doc in the old location?
+      return db.medic.get('sentinel-meta-data', (err, doc) => {
+        if (err) {
+          if (err.statusCode !== 404) {
+            return callback(err);
+          }
+
+          // No doc at all, create and return default
+          doc = {
+            _id: METADATA_DOCUMENT,
+            processed_seq: 0
+          };
+          return callback(null, doc);
+        }
+
+        // Old doc exists, delete it and return the base doc to be saved later
+        db.medic.destroy(doc._id, doc._rev, err => {
+          if (err) {
+            return callback(err);
+          }
+
+          doc._id = METADATA_DOCUMENT;
+          delete doc._rev;
+          callback(null, doc);
+        });
+      });
     }
+
+    // Doc exists in correct location
     callback(null, doc);
   });
 
