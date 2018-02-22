@@ -29,19 +29,19 @@ let changesFeed;
  *    medic-docs
  */
 const AVAILABLE_TRANSITIONS = [
-  'accept_patient_reports',
-  'conditional_alerts',
-  'default_responses',
   'maintain_info_document',
-  'multi_report_alerts',
-  'update_sent_by',
-  'resolve_pending',
-  'registration',
   'update_clinics',
+  'registration',
+  'accept_patient_reports',
+  'generate_patient_id_on_people',
+  'default_responses',
+  'update_sent_by',
+  'update_sent_forms',
+  'conditional_alerts',
+  'multi_report_alerts',
   'update_notifications',
   'update_scheduled_reports',
-  'update_sent_forms',
-  'generate_patient_id_on_people'
+  'resolve_pending'
 ];
 
 /*
